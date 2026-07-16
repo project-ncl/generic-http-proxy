@@ -4,7 +4,7 @@
  */
 package org.commonjava.service.httprox;
 
-import static org.commonjava.indy.service.httprox.util.UrlUtils.base64url;
+import static org.jboss.pnc.proxy.util.UrlUtils.base64url;
 import static org.hamcrest.CoreMatchers.notNullValue;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.mockito.ArgumentMatchers.*;
@@ -31,7 +31,7 @@ import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.impl.conn.DefaultProxyRoutePlanner;
-import org.commonjava.indy.service.httprox.client.content.ContentRetrievalService;
+import org.jboss.pnc.proxy.client.content.ContentRetrievalService;
 import org.junit.jupiter.api.BeforeAll;
 import org.mockito.Mockito;
 
