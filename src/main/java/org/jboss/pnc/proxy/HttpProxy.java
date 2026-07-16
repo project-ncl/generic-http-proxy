@@ -1,0 +1,105 @@
+/*
+ * Copyright 2026 Red Hat, Inc.
+ * SPDX-License-Identifier: Apache-2.0
+ */
+package org.jboss.pnc.proxy;
+
+import java.io.IOException;
+import java.net.InetSocketAddress;
+
+import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.enterprise.event.Observes;
+import jakarta.inject.Inject;
+
+import org.jboss.pnc.proxy.config.ProxyConfiguration;
+import org.jboss.pnc.proxy.handler.ProxyAcceptHandler;
+import org.jboss.pnc.proxy.util.PortFinder;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.xnio.*;
+import org.xnio.channels.AcceptingChannel;
+
+import io.quarkus.runtime.ShutdownEvent;
+import io.quarkus.runtime.StartupEvent;
+
+@ApplicationScoped
+public class HttpProxy {
+
+    private final Logger logger = LoggerFactory.getLogger(getClass());
+
+    @Inject
+    ProxyConfiguration config;
+
+    @Inject
+    ProxyAcceptHandler acceptHandler;
+
+    private AcceptingChannel<StreamConnection> server;
+
+    protected HttpProxy() {
+    }
+
+    public HttpProxy(final ProxyConfiguration config, ProxyAcceptHandler acceptHandler) {
+        this.config = config;
+        this.acceptHandler = acceptHandler;
+    }
+
+    public void onStart(@Observes StartupEvent ev) {
+        String bind = "0.0.0.0";
+
+        logger.info("Starting HTTProx proxy on: {}:{}", bind, config.getPort());
+
+        XnioWorker worker;
+        try {
+            worker = Xnio.getInstance()
+                    .createWorker(
+                            OptionMap.builder()
+                                    .set(Options.WORKER_IO_THREADS, config.getIoThreads())
+                                    .set(Options.WORKER_TASK_CORE_THREADS, config.getTaskThreads())
+                                    .getMap());
+
+            final InetSocketAddress addr;
+            if (config.getPort() < 1) {
+                ThreadLocal<InetSocketAddress> using = new ThreadLocal<>();
+                server = PortFinder.findPortFor(16, (foundPort) -> {
+                    InetSocketAddress a = new InetSocketAddress(bind, config.getPort());
+                    AcceptingChannel<StreamConnection> result = worker
+                            .createStreamConnectionServer(a, acceptHandler, OptionMap.EMPTY);
+
+                    result.resumeAccepts();
+                    using.set(a);
+
+                    return result;
+                });
+
+                addr = using.get();
+                config.setPort(addr.getPort());
+            } else {
+                addr = new InetSocketAddress(bind, config.getPort());
+                server = worker.createStreamConnectionServer(
+                        addr,
+                        acceptHandler,
+                        config.getHighWater() == 0 ? OptionMap.EMPTY
+                                : OptionMap.builder()
+                                        .set(Options.CONNECTION_HIGH_WATER, config.getHighWater())
+                                        .getMap());
+
+                server.resumeAccepts();
+            }
+            logger.info("HTTProxy listening on: {}", addr);
+        } catch (IllegalArgumentException | IOException e) {
+            System.out.println(e.getMessage());
+        }
+    }
+
+    public void onStop(@Observes ShutdownEvent ev) {
+        if (server != null) {
+            try {
+                logger.info("stopping server");
+                server.suspendAccepts();
+                server.close();
+            } catch (final IOException e) {
+                logger.error("Failed to stop: " + e.getMessage(), e);
+            }
+        }
+    }
+}
