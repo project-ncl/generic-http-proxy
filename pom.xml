@@ -7,19 +7,37 @@
 -->
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
-  <groupId>org.commonjava.indy.service</groupId>
-  <artifactId>indy-generic-proxy-service</artifactId>
-  <version>2.0.3-SNAPSHOT</version>
-  <name>Indy :: Service :: Generic Proxy</name>
+
+  <parent>
+    <groupId>org.jboss</groupId>
+    <artifactId>jboss-parent</artifactId>
+    <version>53</version>
+    <relativePath/>
+  </parent>
+
+  <groupId>org.jboss.pnc</groupId>
+  <artifactId>generic-http-proxy</artifactId>
+  <version>1.0.0-SNAPSHOT</version>
+  <inceptionYear>2021</inceptionYear>
+
+  <name>PNC :: Generic HTTP Proxy</name>
+  <description>PNC Generic HTTP Proxy Service</description>
+  <url>https://github.com/project-ncl/generic-http-proxy</url>
 
   <scm>
-    <connection>scm:git:https://github.com/commonjava/indy-generic-proxy-service</connection>
-    <developerConnection>scm:git:https://github.com/commonjava/indy-generic-proxy-service</developerConnection>
+    <connection>scm:git:https://github.com/project-ncl/generic-http-proxy</connection>
+    <developerConnection>scm:git:https://github.com/project-ncl/generic-http-proxy</developerConnection>
     <tag>HEAD</tag>
-    <url>http://github.com/Commonjava/indy-generic-proxy-service</url>
+    <url>https://github.com/project-ncl/generic-http-proxy</url>
   </scm>
 
   <properties>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+    <maven.compiler.parameters>true</maven.compiler.parameters>
+    <maven.compiler.release>21</maven.compiler.release>
+    <jdk.min.version>${maven.compiler.release}</jdk.min.version>
+
     <apiVersion>1</apiVersion>
     <rootPath>${basedir}</rootPath>
 
@@ -35,6 +53,11 @@
     <keycloakVersion>22.0.5</keycloakVersion>
     <quarkus.package.type>uber-jar</quarkus.package.type>
     <infinispanVersion>14.0.21.Final</infinispanVersion>
+    
+    <artifactory-client.version>2.13.0</artifactory-client.version>
+    
+    <jib.base.image.version>1.24-7</jib.base.image.version>
+    <jib.base.image.digest>sha256:5ee73448f86838eecff13f80512b49ff6ea0fa21aaf5d1fa8afe3402fc965e9e</jib.base.image.digest>
   </properties>
 
   <dependencyManagement>
@@ -131,6 +154,17 @@
       <groupId>org.commonjava.indy.service</groupId>
       <artifactId>indy-model-core-java</artifactId>
       <version>${indyModelVersion}</version>
+    </dependency>
+    <!-- Artifactory Java Client -->
+    <dependency>
+      <groupId>org.jfrog.artifactory.client</groupId>
+      <artifactId>artifactory-java-client-services</artifactId>
+      <version>${artifactory-client.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.jfrog.artifactory.client</groupId>
+      <artifactId>artifactory-java-client-api</artifactId>
+      <version>${artifactory-client.version}</version>
     </dependency>
     <dependency>
       <groupId>org.keycloak</groupId>
