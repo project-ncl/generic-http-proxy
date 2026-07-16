@@ -15,9 +15,8 @@
  */
 package org.commonjava.indy.service.httprox.util;
 
-public class MetricsConstants
-{
-    
+public class MetricsConstants {
+
     public static final String ACCESS_CHANNEL = "access-channel";
 
     public static final String REQUEST_LATENCY_NS = "request-latency-ns";

@@ -19,9 +19,9 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.inject.Named;
 import jakarta.ws.rs.Produces;
+
 import org.commonjava.indy.service.httprox.config.ProxyConfiguration;
 import org.eclipse.microprofile.context.ManagedExecutor;
-
 
 public class ProxyTransfersExecutor {
 
@@ -31,12 +31,11 @@ public class ProxyTransfersExecutor {
     @Named("mitm-transfers")
     @ApplicationScoped
     @Produces
-    public ManagedExecutor getExecutor()
-    {
+    public ManagedExecutor getExecutor() {
 
         return ManagedExecutor.builder()
-                .maxAsync( config.getMitmMaxAsync() )
-                .maxQueued( config.getMitmMaxQueued() )
+                .maxAsync(config.getMitmMaxAsync())
+                .maxQueued(config.getMitmMaxQueued())
                 .build();
     }
 }

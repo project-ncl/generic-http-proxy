@@ -15,8 +15,16 @@
  */
 package org.commonjava.indy.service.httprox.handler;
 
-import io.opentelemetry.api.trace.Span;
+import static org.commonjava.indy.pkg.PackageTypeConstants.PKG_TYPE_GENERIC_HTTP;
+import static org.commonjava.indy.service.httprox.util.MetricsConstants.*;
+
+import java.io.IOException;
+
+import jakarta.annotation.PostConstruct;
+import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.inject.Inject;
 import jakarta.inject.Named;
+
 import org.commonjava.indy.model.core.io.IndyObjectMapper;
 import org.commonjava.indy.service.httprox.client.content.ContentRetrievalService;
 import org.commonjava.indy.service.httprox.client.repository.RepositoryService;
@@ -35,13 +43,7 @@ import org.xnio.channels.AcceptingChannel;
 import org.xnio.conduits.ConduitStreamSinkChannel;
 import org.xnio.conduits.ConduitStreamSourceChannel;
 
-import jakarta.annotation.PostConstruct;
-import jakarta.enterprise.context.ApplicationScoped;
-import jakarta.inject.Inject;
-import java.io.IOException;
-
-import static org.commonjava.indy.pkg.PackageTypeConstants.PKG_TYPE_GENERIC_HTTP;
-import static org.commonjava.indy.service.httprox.util.MetricsConstants.*;
+import io.opentelemetry.api.trace.Span;
 
 @ApplicationScoped
 public class ProxyAcceptHandler implements ChannelListener<AcceptingChannel<StreamConnection>> {
@@ -78,8 +80,7 @@ public class ProxyAcceptHandler implements ChannelListener<AcceptingChannel<Stre
     }
 
     @PostConstruct
-    public void post()
-    {
+    public void post() {
         objectMapper = new IndyObjectMapper(false);
     }
 
@@ -87,8 +88,7 @@ public class ProxyAcceptHandler implements ChannelListener<AcceptingChannel<Stre
     public void handleEvent(AcceptingChannel<StreamConnection> channel) {
         final Logger logger = LoggerFactory.getLogger(getClass());
         long start = System.nanoTime();
-        if ( otel.enabled() )
-        {
+        if (otel.enabled()) {
             Span.current().setAttribute(ACCESS_CHANNEL, PKG_TYPE_GENERIC_HTTP);
             Span.current().setAttribute(PACKAGE_TYPE, PKG_TYPE_GENERIC_HTTP);
         }
@@ -106,9 +106,8 @@ public class ProxyAcceptHandler implements ChannelListener<AcceptingChannel<Stre
             return;
         }
 
-        if ( otel.enabled() )
-        {
-            Span.current().setAttribute( REQUEST_PHASE, REQUEST_PHASE_START );
+        if (otel.enabled()) {
+            Span.current().setAttribute(REQUEST_PHASE, REQUEST_PHASE_START);
         }
 
         logger.info("accepted request from address: {}", accepted.getPeerAddress());
@@ -116,11 +115,20 @@ public class ProxyAcceptHandler implements ChannelListener<AcceptingChannel<Stre
         final ConduitStreamSourceChannel source = accepted.getSourceChannel();
         final ConduitStreamSinkChannel sink = accepted.getSinkChannel();
 
-        ProxyRepositoryCreator repoCreator = new RepoCreator( config );
+        ProxyRepositoryCreator repoCreator = new RepoCreator(config);
 
-        final ProxyResponseWriter writer =
-                new ProxyResponseWriter( config, repoCreator, accepted, repositoryService, contentRetrievalService,
-                        proxyExecutor, proxyAuthenticator, objectMapper, cacheProducer, start, otel );
+        final ProxyResponseWriter writer = new ProxyResponseWriter(
+                config,
+                repoCreator,
+                accepted,
+                repositoryService,
+                contentRetrievalService,
+                proxyExecutor,
+                proxyAuthenticator,
+                objectMapper,
+                cacheProducer,
+                start,
+                otel);
 
         logger.debug("Setting writer: {}", writer);
         sink.getWriteSetter().set(writer);

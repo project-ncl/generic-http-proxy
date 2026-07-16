@@ -15,7 +15,20 @@
  */
 package org.commonjava.indy.service.httprox.handler;
 
-import io.opentelemetry.api.trace.Span;
+import static java.lang.Integer.parseInt;
+import static org.apache.commons.codec.digest.DigestUtils.sha256Hex;
+import static org.apache.commons.io.IOUtils.closeQuietly;
+import static org.commonjava.indy.model.core.ArtifactStore.TRACKING_ID;
+import static org.commonjava.indy.service.httprox.util.ApplicationHeader.proxy_authenticate;
+import static org.commonjava.indy.service.httprox.util.ApplicationStatus.PROXY_AUTHENTICATION_REQUIRED;
+import static org.commonjava.indy.service.httprox.util.HttpProxyConstants.*;
+import static org.commonjava.indy.service.httprox.util.UserPass.parse;
+
+import java.io.IOException;
+import java.net.SocketAddress;
+import java.net.URL;
+import java.nio.channels.SocketChannel;
+
 import org.apache.http.HttpRequest;
 import org.apache.http.RequestLine;
 import org.commonjava.indy.model.core.ArtifactStore;
@@ -35,19 +48,7 @@ import org.xnio.StreamConnection;
 import org.xnio.conduits.ConduitStreamSinkChannel;
 import org.xnio.conduits.ConduitStreamSourceChannel;
 
-import java.io.IOException;
-import java.net.SocketAddress;
-import java.net.URL;
-import java.nio.channels.SocketChannel;
-
-import static java.lang.Integer.parseInt;
-import static org.apache.commons.codec.digest.DigestUtils.sha256Hex;
-import static org.apache.commons.io.IOUtils.closeQuietly;
-import static org.commonjava.indy.model.core.ArtifactStore.TRACKING_ID;
-import static org.commonjava.indy.service.httprox.util.ApplicationHeader.proxy_authenticate;
-import static org.commonjava.indy.service.httprox.util.ApplicationStatus.PROXY_AUTHENTICATION_REQUIRED;
-import static org.commonjava.indy.service.httprox.util.HttpProxyConstants.*;
-import static org.commonjava.indy.service.httprox.util.UserPass.parse;
+import io.opentelemetry.api.trace.Span;
 
 public final class ProxyResponseWriter
         implements ChannelListener<ConduitStreamSinkChannel> {
@@ -81,12 +82,18 @@ public final class ProxyResponseWriter
 
     private long startNanos;
 
-    public ProxyResponseWriter(final ProxyConfiguration config, final ProxyRepositoryCreator repoCreator,
-                               final StreamConnection accepted, final RepositoryService repositoryService,
-                               final ContentRetrievalService contentRetrievalService, final ManagedExecutor executor,
-                               final KeycloakProxyAuthenticator proxyAuthenticator, final IndyObjectMapper indyObjectMapper,
-                               final CacheProducer cacheProducer, final long start, final OtelAdapter otel)
-    {
+    public ProxyResponseWriter(
+            final ProxyConfiguration config,
+            final ProxyRepositoryCreator repoCreator,
+            final StreamConnection accepted,
+            final RepositoryService repositoryService,
+            final ContentRetrievalService contentRetrievalService,
+            final ManagedExecutor executor,
+            final KeycloakProxyAuthenticator proxyAuthenticator,
+            final IndyObjectMapper indyObjectMapper,
+            final CacheProducer cacheProducer,
+            final long start,
+            final OtelAdapter otel) {
         this.config = config;
         this.repoCreator = repoCreator;
         this.peerAddress = accepted.getPeerAddress();
@@ -114,16 +121,17 @@ public final class ProxyResponseWriter
         doHandleEvent(channel);
     }
 
-    private void doHandleEvent(final ConduitStreamSinkChannel sinkChannel)
-    {
-        if ( directed )
-        {
+    private void doHandleEvent(final ConduitStreamSinkChannel sinkChannel) {
+        if (directed) {
             return;
         }
 
-        ProxyMeter meter =
-                new ProxyMeter( httpRequest.getRequestLine().getMethod(), httpRequest.getRequestLine().toString(),
-                        startNanos, peerAddress, otel );
+        ProxyMeter meter = new ProxyMeter(
+                httpRequest.getRequestLine().getMethod(),
+                httpRequest.getRequestLine().toString(),
+                startNanos,
+                peerAddress,
+                otel);
 
         HttpConduitWrapper http = new HttpConduitWrapper(sinkChannel, httpRequest);
         if (httpRequest == null) {
@@ -143,17 +151,13 @@ public final class ProxyResponseWriter
         sinkChannel.getCloseSetter().set((c) -> {
             logger.trace("Sink channel closing...");
             Thread.currentThread().setName(oldThreadName); // restore original thread name
-            if ( sslTunnel != null )
-            {
-                logger.trace( "Close ssl tunnel" );
+            if (sslTunnel != null) {
+                logger.trace("Close ssl tunnel");
                 sslTunnel.close();
             }
-            try
-            {
+            try {
                 sourceChannel.close();
-            }
-            catch (IOException e)
-            {
+            } catch (IOException e) {
                 logger.warn("Close source channel failed", e);
             }
         });
@@ -161,103 +165,116 @@ public final class ProxyResponseWriter
         logger.debug("\n\n\n>>>>>>> Handle write\n\n\n");
         if (error == null) {
 
-            ProxyResponseHelper proxyResponseHelper =
-                    new ProxyResponseHelper( httpRequest, config, repoCreator, repositoryService, contentRetrievalService, indyObjectMapper, cacheProducer, otel );
+            ProxyResponseHelper proxyResponseHelper = new ProxyResponseHelper(
+                    httpRequest,
+                    config,
+                    repoCreator,
+                    repositoryService,
+                    contentRetrievalService,
+                    indyObjectMapper,
+                    cacheProducer,
+                    otel);
 
-            try
-            {
+            try {
 
-                final UserPass proxyUserPass = parse( ApplicationHeader.proxy_authorization, httpRequest, null );
-                logger.info( "Using proxy authentication: {}", proxyUserPass );
+                final UserPass proxyUserPass = parse(ApplicationHeader.proxy_authorization, httpRequest, null);
+                logger.info("Using proxy authentication: {}", proxyUserPass);
 
-                logger.debug( "Proxy UserPass: {}\nConfig secured? {}\nConfig tracking type: {}", proxyUserPass,
-                        config.isSecured(), config.getTrackingType() );
-                if ( proxyUserPass == null && ( config.isSecured() || TrackingType.ALWAYS == config.getTrackingType() ) )
-                {
+                logger.debug(
+                        "Proxy UserPass: {}\nConfig secured? {}\nConfig tracking type: {}",
+                        proxyUserPass,
+                        config.isSecured(),
+                        config.getTrackingType());
+                if (proxyUserPass == null && (config.isSecured() || TrackingType.ALWAYS == config.getTrackingType())) {
 
-                    String realmInfo = String.format( PROXY_AUTHENTICATE_FORMAT, config.getProxyRealm() );
+                    String realmInfo = String.format(PROXY_AUTHENTICATE_FORMAT, config.getProxyRealm());
 
-                    logger.info( "Not authenticated to proxy. Sending response: {} / {}: {}",
-                            PROXY_AUTHENTICATION_REQUIRED, proxy_authenticate, realmInfo );
+                    logger.info(
+                            "Not authenticated to proxy. Sending response: {} / {}: {}",
+                            PROXY_AUTHENTICATION_REQUIRED,
+                            proxy_authenticate,
+                            realmInfo);
 
-                    http.writeStatus( PROXY_AUTHENTICATION_REQUIRED );
-                    http.writeHeader( proxy_authenticate, String.format( "%s\n", realmInfo ) );
-                }
-                else
-                {
+                    http.writeStatus(PROXY_AUTHENTICATION_REQUIRED);
+                    http.writeHeader(proxy_authenticate, String.format("%s\n", realmInfo));
+                } else {
                     String trackingId = null;
                     RequestLine requestLine = httpRequest.getRequestLine();
                     String method = requestLine.getMethod().toUpperCase();
                     boolean authenticated = true;
 
-                    if ( proxyUserPass != null )
-                    {
-                        TrackingKey trackingKey = proxyResponseHelper.getTrackingKey( proxyUserPass );
-                        if ( trackingKey != null )
-                        {
+                    if (proxyUserPass != null) {
+                        TrackingKey trackingKey = proxyResponseHelper.getTrackingKey(proxyUserPass);
+                        if (trackingKey != null) {
                             trackingId = trackingKey.getId();
-                            if ( otel.enabled() )
-                            {
+                            if (otel.enabled()) {
                                 Span.current().setAttribute(TRACKING_ID, trackingId);
                             }
                         }
 
-                        /* String authCacheKey = generateAuthCacheKey( proxyUserPass );
-                        Boolean isAuthToken = false;//proxyAuthCache.get( authCacheKey );
-                        if ( Boolean.TRUE.equals( isAuthToken ) )
-                        {
-                            authenticated = true;
-                            logger.debug( "Found auth key in cache" );
-                        }
-                        else
-                        {
-                            logger.debug(
-                                    "Passing BASIC authentication credentials to Keycloak bearer-token translation authenticator" );
-                            authenticated = proxyAuthenticator.authenticate( proxyUserPass, http );
-                            *//*if ( authenticated )
-                            {
-                                proxyAuthCache.put( authCacheKey, Boolean.TRUE, config.getAuthCacheExpirationHours(), TimeUnit.HOURS );
-                            }*//*
-                        }
-                        logger.debug( "Authentication done, result: {}", authenticated );*/
+                        /*
+                         * String authCacheKey = generateAuthCacheKey( proxyUserPass );
+                         * Boolean isAuthToken = false;//proxyAuthCache.get( authCacheKey );
+                         * if ( Boolean.TRUE.equals( isAuthToken ) )
+                         * {
+                         * authenticated = true;
+                         * logger.debug( "Found auth key in cache" );
+                         * }
+                         * else
+                         * {
+                         * logger.debug(
+                         * "Passing BASIC authentication credentials to Keycloak bearer-token translation authenticator"
+                         * );
+                         * authenticated = proxyAuthenticator.authenticate( proxyUserPass, http );
+                         *//*
+                            * if ( authenticated )
+                            * {
+                            * proxyAuthCache.put( authCacheKey, Boolean.TRUE, config.getAuthCacheExpirationHours(),
+                            * TimeUnit.HOURS );
+                            * }
+                            *//*
+                               * }
+                               * logger.debug( "Authentication done, result: {}", authenticated );
+                               */
 
                     }
 
-                    if ( authenticated )
-                    {
+                    if (authenticated) {
                         switch (method) {
                             case GET_METHOD:
-                            case HEAD_METHOD:
-                            {
-                                final URL url = new URL( requestLine.getUri() );
-                                logger.debug( "Get artifact store, trackingId: {}, url: {}", trackingId, url );
-                                ArtifactStore store = proxyResponseHelper.getArtifactStore( trackingId, url );
+                            case HEAD_METHOD: {
+                                final URL url = new URL(requestLine.getUri());
+                                logger.debug("Get artifact store, trackingId: {}, url: {}", trackingId, url);
+                                ArtifactStore store = proxyResponseHelper.getArtifactStore(trackingId, url);
                                 // 'url.getFile()' gets the file name of this URL. The returned file portion will be the
                                 // same as getPath(), plus the concatenation of the value of getQuery(), if any.
-                                proxyResponseHelper.transfer( http, store, url.getFile(), GET_METHOD.equals( method ), proxyUserPass, meter );
+                                proxyResponseHelper.transfer(
+                                        http,
+                                        store,
+                                        url.getFile(),
+                                        GET_METHOD.equals(method),
+                                        proxyUserPass,
+                                        meter);
                                 break;
                             }
-                            case OPTIONS_METHOD:
-                            {
+                            case OPTIONS_METHOD: {
                                 http.writeStatus(ApplicationStatus.OK);
                                 http.writeHeader(ApplicationHeader.allow, ALLOW_HEADER_VALUE);
                                 break;
                             }
-                            case CONNECT_METHOD:
-                            {
-                                if ( !config.isMITMEnabled() )
-                                {
-                                    logger.debug( "CONNECT method not supported unless MITM-proxying is enabled." );
-                                    http.writeStatus( ApplicationStatus.BAD_REQUEST );
+                            case CONNECT_METHOD: {
+                                if (!config.isMITMEnabled()) {
+                                    logger.debug("CONNECT method not supported unless MITM-proxying is enabled.");
+                                    http.writeStatus(ApplicationStatus.BAD_REQUEST);
                                     break;
                                 }
 
                                 String uri = requestLine.getUri(); // e.g, github.com:443
-                                logger.debug( "Get CONNECT request, uri: {}", uri );
+                                logger.debug("Get CONNECT request, uri: {}", uri);
 
-                                String[] toks = uri.split( ":" );
+                                String[] toks = uri.split(":");
                                 String host = toks[0];
-                                int port = parseInt( toks[1] );
+                                int port = parseInt(toks[1]);
 
                                 directed = true;
 
@@ -266,30 +283,35 @@ public final class ProxyResponseWriter
 
                                 SocketChannel socketChannel;
 
-                                ProxyMITMSSLServer svr =
-                                        new ProxyMITMSSLServer( host, port, trackingId, proxyUserPass,
-                                                proxyResponseHelper, config, meter, http );
-                                tunnelAndMITMExecutor.submit( svr );
+                                ProxyMITMSSLServer svr = new ProxyMITMSSLServer(
+                                        host,
+                                        port,
+                                        trackingId,
+                                        proxyUserPass,
+                                        proxyResponseHelper,
+                                        config,
+                                        meter,
+                                        http);
+                                tunnelAndMITMExecutor.submit(svr);
                                 socketChannel = svr.getSocketChannel();
 
-                                if ( socketChannel == null )
-                                {
-                                    logger.debug( "Failed to get MITM socket channel" );
-                                    http.writeStatus( ApplicationStatus.SERVER_ERROR );
+                                if (socketChannel == null) {
+                                    logger.debug("Failed to get MITM socket channel");
+                                    http.writeStatus(ApplicationStatus.SERVER_ERROR);
                                     svr.stop();
                                     break;
                                 }
 
-                                sslTunnel = new ProxySSLTunnel( sinkChannel, socketChannel, config );
-                                tunnelAndMITMExecutor.submit( sslTunnel );
-                                proxyRequestReader.setProxySSLTunnel( sslTunnel ); // client input will be directed to target socket
-                                svr.setProxySSLTunnel( sslTunnel );
+                                sslTunnel = new ProxySSLTunnel(sinkChannel, socketChannel, config);
+                                tunnelAndMITMExecutor.submit(sslTunnel);
+                                proxyRequestReader.setProxySSLTunnel(sslTunnel); // client input will be directed to target socket
+                                svr.setProxySSLTunnel(sslTunnel);
 
                                 // When all is ready, send the 200 to client. Client send the SSL handshake to reader,
                                 // reader direct it to tunnel to MITM. MITM finish the handshake and read the request data,
                                 // retrieve remote content and send back to tunnel to client.
-                                http.writeStatus( ApplicationStatus.OK );
-                                http.writeHeader( "Status", "200 OK\r\n" );
+                                http.writeStatus(ApplicationStatus.OK);
+                                http.writeHeader("Status", "200 OK\r\n");
 
                                 break;
                             }
@@ -309,15 +331,12 @@ public final class ProxyResponseWriter
             handleError(error, http);
         }
 
-        if ( directed )
-        {
+        if (directed) {
             // do not close sink channel
-        }
-        else
-        {
-            closeQuietly( http );
-            closeQuietly( sinkChannel );
-            closeQuietly( sourceChannel );
+        } else {
+            closeQuietly(http);
+            closeQuietly(sinkChannel);
+            closeQuietly(sourceChannel);
         }
     }
 
@@ -330,9 +349,8 @@ public final class ProxyResponseWriter
         }
     }
 
-    private String generateAuthCacheKey( UserPass proxyUserPass )
-    {
-        return sha256Hex( proxyUserPass.getUser() + ":" + proxyUserPass.getPassword() );
+    private String generateAuthCacheKey(UserPass proxyUserPass) {
+        return sha256Hex(proxyUserPass.getUser() + ":" + proxyUserPass.getPassword());
     }
 
     private void handleError(final Throwable error, final HttpWrapper http) {

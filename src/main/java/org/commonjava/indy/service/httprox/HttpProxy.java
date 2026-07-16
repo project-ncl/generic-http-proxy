@@ -15,9 +15,13 @@
  */
 package org.commonjava.indy.service.httprox;
 
+import java.io.IOException;
+import java.net.InetSocketAddress;
 
-import io.quarkus.runtime.ShutdownEvent;
-import io.quarkus.runtime.StartupEvent;
+import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.enterprise.event.Observes;
+import jakarta.inject.Inject;
+
 import org.commonjava.indy.service.httprox.config.ProxyConfiguration;
 import org.commonjava.indy.service.httprox.handler.ProxyAcceptHandler;
 import org.commonjava.indy.service.httprox.util.PortFinder;
@@ -26,11 +30,8 @@ import org.slf4j.LoggerFactory;
 import org.xnio.*;
 import org.xnio.channels.AcceptingChannel;
 
-import jakarta.enterprise.context.ApplicationScoped;
-import jakarta.enterprise.event.Observes;
-import jakarta.inject.Inject;
-import java.io.IOException;
-import java.net.InetSocketAddress;
+import io.quarkus.runtime.ShutdownEvent;
+import io.quarkus.runtime.StartupEvent;
 
 @ApplicationScoped
 public class HttpProxy {
@@ -44,7 +45,6 @@ public class HttpProxy {
     ProxyAcceptHandler acceptHandler;
 
     private AcceptingChannel<StreamConnection> server;
-
 
     protected HttpProxy() {
     }
@@ -62,18 +62,19 @@ public class HttpProxy {
         XnioWorker worker;
         try {
             worker = Xnio.getInstance()
-                    .createWorker(OptionMap.builder()
-                            .set(Options.WORKER_IO_THREADS, config.getIoThreads())
-                            .set(Options.WORKER_TASK_CORE_THREADS, config.getTaskThreads())
-                            .getMap());
+                    .createWorker(
+                            OptionMap.builder()
+                                    .set(Options.WORKER_IO_THREADS, config.getIoThreads())
+                                    .set(Options.WORKER_TASK_CORE_THREADS, config.getTaskThreads())
+                                    .getMap());
 
             final InetSocketAddress addr;
             if (config.getPort() < 1) {
                 ThreadLocal<InetSocketAddress> using = new ThreadLocal<>();
                 server = PortFinder.findPortFor(16, (foundPort) -> {
                     InetSocketAddress a = new InetSocketAddress(bind, config.getPort());
-                    AcceptingChannel<StreamConnection> result =
-                            worker.createStreamConnectionServer(a, acceptHandler, OptionMap.EMPTY);
+                    AcceptingChannel<StreamConnection> result = worker
+                            .createStreamConnectionServer(a, acceptHandler, OptionMap.EMPTY);
 
                     result.resumeAccepts();
                     using.set(a);
@@ -85,7 +86,13 @@ public class HttpProxy {
                 config.setPort(addr.getPort());
             } else {
                 addr = new InetSocketAddress(bind, config.getPort());
-                server = worker.createStreamConnectionServer(addr, acceptHandler, config.getHighWater() == 0 ? OptionMap.EMPTY : OptionMap.builder().set(Options.CONNECTION_HIGH_WATER,  config.getHighWater()).getMap());
+                server = worker.createStreamConnectionServer(
+                        addr,
+                        acceptHandler,
+                        config.getHighWater() == 0 ? OptionMap.EMPTY
+                                : OptionMap.builder()
+                                        .set(Options.CONNECTION_HIGH_WATER, config.getHighWater())
+                                        .getMap());
 
                 server.resumeAccepts();
             }

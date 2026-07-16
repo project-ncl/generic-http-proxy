@@ -15,59 +15,53 @@
  */
 package org.commonjava.indy.service.httprox.stats;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
-
 import jakarta.enterprise.inject.Alternative;
 import jakarta.inject.Named;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 @Alternative
 @Named
-public class Versioning
-{
+public class Versioning {
 
     private String version;
 
     private String builder;
 
-    @JsonProperty( "commit-id" )
+    @JsonProperty("commit-id")
     private String commitId;
 
     private String timestamp;
 
-    public Versioning()
-    {
+    public Versioning() {
     }
 
     @JsonCreator
-    public Versioning( @JsonProperty( value = "version" ) final String version,
-                       @JsonProperty( "builder" ) final String builder,
-                       @JsonProperty( "commit-id" ) final String commitId,
-                       @JsonProperty( "timestamp" ) final String timestamp )
-    {
+    public Versioning(
+            @JsonProperty(value = "version") final String version,
+            @JsonProperty("builder") final String builder,
+            @JsonProperty("commit-id") final String commitId,
+            @JsonProperty("timestamp") final String timestamp) {
         this.version = version;
         this.builder = builder;
         this.commitId = commitId;
         this.timestamp = timestamp;
     }
 
-    public String getVersion()
-    {
+    public String getVersion() {
         return version;
     }
 
-    public String getBuilder()
-    {
+    public String getBuilder() {
         return builder;
     }
 
-    public String getCommitId()
-    {
+    public String getCommitId() {
         return commitId;
     }
 
-    public String getTimestamp()
-    {
+    public String getTimestamp() {
         return timestamp;
     }
 

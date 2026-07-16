@@ -15,184 +15,156 @@
  */
 package org.commonjava.indy.service.httprox.util;
 
-import org.xnio.*;
-import org.xnio.channels.StreamSinkChannel;
-import org.xnio.channels.StreamSourceChannel;
-
 import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.util.concurrent.TimeUnit;
 
+import org.xnio.*;
+import org.xnio.channels.StreamSinkChannel;
+import org.xnio.channels.StreamSourceChannel;
+
 public class OutputStreamSinkChannel
-        implements StreamSinkChannel
-{
+        implements StreamSinkChannel {
     private final OutputStream outputStream;
 
-    public OutputStreamSinkChannel( OutputStream outputStream )
-    {
+    public OutputStreamSinkChannel(OutputStream outputStream) {
         this.outputStream = outputStream;
     }
 
     @Override
-    public long transferFrom(FileChannel fileChannel, long l, long l1 ) throws IOException
-    {
+    public long transferFrom(FileChannel fileChannel, long l, long l1) throws IOException {
         return 0;
     }
 
     @Override
-    public long transferFrom(StreamSourceChannel streamSourceChannel, long l, ByteBuffer byteBuffer )
-            throws IOException
-    {
+    public long transferFrom(StreamSourceChannel streamSourceChannel, long l, ByteBuffer byteBuffer)
+            throws IOException {
         return 0;
     }
 
     @Override
-    public void suspendWrites()
-    {
+    public void suspendWrites() {
 
     }
 
     @Override
-    public void resumeWrites()
-    {
+    public void resumeWrites() {
 
     }
 
     @Override
-    public boolean isWriteResumed()
-    {
+    public boolean isWriteResumed() {
         return false;
     }
 
     @Override
-    public void wakeupWrites()
-    {
+    public void wakeupWrites() {
 
     }
 
     @Override
-    public void shutdownWrites() throws IOException
-    {
+    public void shutdownWrites() throws IOException {
 
     }
 
     @Override
-    public void awaitWritable() throws IOException
-    {
+    public void awaitWritable() throws IOException {
 
     }
 
     @Override
-    public void awaitWritable( long l, TimeUnit timeUnit ) throws IOException
-    {
+    public void awaitWritable(long l, TimeUnit timeUnit) throws IOException {
 
     }
 
     @Override
-    public XnioExecutor getWriteThread()
-    {
+    public XnioExecutor getWriteThread() {
         return null;
     }
 
     @Override
-    public ChannelListener.Setter<? extends StreamSinkChannel> getWriteSetter()
-    {
+    public ChannelListener.Setter<? extends StreamSinkChannel> getWriteSetter() {
         return null;
     }
 
     @Override
-    public ChannelListener.Setter<? extends StreamSinkChannel> getCloseSetter()
-    {
+    public ChannelListener.Setter<? extends StreamSinkChannel> getCloseSetter() {
         return null;
     }
 
     @Override
-    public XnioWorker getWorker()
-    {
+    public XnioWorker getWorker() {
         return null;
     }
 
     @Override
-    public XnioIoThread getIoThread()
-    {
+    public XnioIoThread getIoThread() {
         return null;
     }
 
     @Override
-    public boolean flush() throws IOException
-    {
+    public boolean flush() throws IOException {
         outputStream.flush();
         return true;
     }
 
     @Override
-    public int writeFinal( ByteBuffer byteBuffer ) throws IOException
-    {
+    public int writeFinal(ByteBuffer byteBuffer) throws IOException {
         return 0;
     }
 
     @Override
-    public long writeFinal( ByteBuffer[] byteBuffers, int i, int i1 ) throws IOException
-    {
+    public long writeFinal(ByteBuffer[] byteBuffers, int i, int i1) throws IOException {
         return 0;
     }
 
     @Override
-    public long writeFinal( ByteBuffer[] byteBuffers ) throws IOException
-    {
+    public long writeFinal(ByteBuffer[] byteBuffers) throws IOException {
         return 0;
     }
 
     @Override
-    public long write( ByteBuffer[] byteBuffers, int i, int i1 ) throws IOException
-    {
+    public long write(ByteBuffer[] byteBuffers, int i, int i1) throws IOException {
         return 0;
     }
 
     @Override
-    public long write( ByteBuffer[] byteBuffers ) throws IOException
-    {
+    public long write(ByteBuffer[] byteBuffers) throws IOException {
         return 0;
     }
 
     @Override
-    public int write( ByteBuffer byteBuffer ) throws IOException
-    {
+    public int write(ByteBuffer byteBuffer) throws IOException {
         byte[] bytes = new byte[byteBuffer.remaining()];
         byteBuffer.get(bytes);
-        outputStream.write( bytes );
+        outputStream.write(bytes);
         return bytes.length;
     }
 
     @Override
-    public boolean isOpen()
-    {
+    public boolean isOpen() {
         return true;
     }
 
     @Override
-    public void close() throws IOException
-    {
+    public void close() throws IOException {
 
     }
 
     @Override
-    public boolean supportsOption( Option<?> option )
-    {
+    public boolean supportsOption(Option<?> option) {
         return false;
     }
 
     @Override
-    public <T> T getOption( Option<T> option ) throws IOException
-    {
+    public <T> T getOption(Option<T> option) throws IOException {
         return null;
     }
 
     @Override
-    public <T> T setOption( Option<T> option, T t ) throws IllegalArgumentException, IOException
-    {
+    public <T> T setOption(Option<T> option, T t) throws IllegalArgumentException, IOException {
         return null;
     }
 }

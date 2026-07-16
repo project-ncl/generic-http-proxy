@@ -15,9 +15,15 @@
  */
 package org.commonjava.service.httprox;
 
-import io.quarkus.test.junit.QuarkusMock;
-import io.smallrye.mutiny.Uni;
-import okhttp3.*;
+import static org.commonjava.indy.service.httprox.util.UrlUtils.base64url;
+import static org.hamcrest.CoreMatchers.notNullValue;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.mockito.ArgumentMatchers.*;
+
+import java.io.*;
+import java.nio.charset.StandardCharsets;
+import java.security.KeyStore;
+
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.io.IOUtils;
@@ -40,17 +46,11 @@ import org.commonjava.indy.service.httprox.client.content.ContentRetrievalServic
 import org.junit.jupiter.api.BeforeAll;
 import org.mockito.Mockito;
 
-import java.io.*;
-import java.nio.charset.StandardCharsets;
-import java.security.KeyStore;
+import io.quarkus.test.junit.QuarkusMock;
+import io.smallrye.mutiny.Uni;
+import okhttp3.*;
 
-import static org.commonjava.indy.service.httprox.util.UrlUtils.base64url;
-import static org.hamcrest.CoreMatchers.notNullValue;
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.mockito.ArgumentMatchers.*;
-
-public class AbstractGenericProxyTest
-{
+public class AbstractGenericProxyTest {
 
     private static final String HOST = "127.0.0.1";
 
@@ -59,17 +59,24 @@ public class AbstractGenericProxyTest
     protected static File etcDir;
 
     @BeforeAll
-    public static void setup() throws Exception
-    {
+    public static void setup() throws Exception {
 
         ContentRetrievalService contentRetrievalService = Mockito.mock(ContentRetrievalService.class);
 
-        Mockito.when(contentRetrievalService.doGet(any(), any(), any(), contains(base64url("indy-api-1.3.1.pom")))).thenReturn(Uni.createFrom().item(buildResponse("indy-api-1.3.1.pom")));
-        Mockito.when(contentRetrievalService.doGet(any(), any(), any(), contains(base64url("fsevents-1.2.4.tgz")))).thenReturn(Uni.createFrom().item(buildResponse("fsevents-1.2.4.tgz")));
-        Mockito.when(contentRetrievalService.doGet(any(), any(), any(), eq(base64url("/test/org/test/simple/1/simple.pom")))).thenReturn(Uni.createFrom().item(buildResponse("simple.pom")));
-        Mockito.when(contentRetrievalService.doGet(any(), any(), any(), eq(base64url("/org/test/simple.pom?version=2.0")))).thenReturn(Uni.createFrom().item(buildResponse("simple-2.0.pom")));
-        Mockito.when(contentRetrievalService.doGet(any(), any(), any(), contains(base64url("simple-1.pom")))).thenReturn(Uni.createFrom().item(buildResponse("simple-1.pom")));
-        Mockito.when(contentRetrievalService.doGet(any(), any(), any(), contains(base64url("no.pom")))).thenReturn(Uni.createFrom().item(buildResponse("no.pom")));
+        Mockito.when(contentRetrievalService.doGet(any(), any(), any(), contains(base64url("indy-api-1.3.1.pom"))))
+                .thenReturn(Uni.createFrom().item(buildResponse("indy-api-1.3.1.pom")));
+        Mockito.when(contentRetrievalService.doGet(any(), any(), any(), contains(base64url("fsevents-1.2.4.tgz"))))
+                .thenReturn(Uni.createFrom().item(buildResponse("fsevents-1.2.4.tgz")));
+        Mockito.when(
+                contentRetrievalService.doGet(any(), any(), any(), eq(base64url("/test/org/test/simple/1/simple.pom"))))
+                .thenReturn(Uni.createFrom().item(buildResponse("simple.pom")));
+        Mockito.when(
+                contentRetrievalService.doGet(any(), any(), any(), eq(base64url("/org/test/simple.pom?version=2.0"))))
+                .thenReturn(Uni.createFrom().item(buildResponse("simple-2.0.pom")));
+        Mockito.when(contentRetrievalService.doGet(any(), any(), any(), contains(base64url("simple-1.pom"))))
+                .thenReturn(Uni.createFrom().item(buildResponse("simple-1.pom")));
+        Mockito.when(contentRetrievalService.doGet(any(), any(), any(), contains(base64url("no.pom"))))
+                .thenReturn(Uni.createFrom().item(buildResponse("no.pom")));
 
         QuarkusMock.installMockForType(contentRetrievalService, ContentRetrievalService.class);
 
@@ -77,28 +84,26 @@ public class AbstractGenericProxyTest
         initTestData();
     }
 
-    private static Response buildResponse(String fileName)
-    {
+    private static Response buildResponse(String fileName) {
 
-        InputStream in = Thread.currentThread().getContextClassLoader().getResourceAsStream(FilenameUtils.getName(fileName));
+        InputStream in = Thread.currentThread()
+                .getContextClassLoader()
+                .getResourceAsStream(FilenameUtils.getName(fileName));
 
         Response.Builder baseBuilder = new Response.Builder()
                 .request(new Request.Builder().url("http://url.com").build())
                 .protocol(Protocol.HTTP_1_1);
 
-        if ( in != null ) {
+        if (in != null) {
             try {
                 return baseBuilder.code(200)
                         .body(ResponseBody.create(toByteArray(in), MediaType.parse("application/json")))
-                        .message("Mock response from inputStream.").build();
-            }
-            catch (IOException e)
-            {
+                        .message("Mock response from inputStream.")
+                        .build();
+            } catch (IOException e) {
                 System.out.println("error>>:" + e.getMessage());
             }
-        }
-        else
-        {
+        } else {
             return baseBuilder.code(404).message("Mock 404 response.").build();
         }
 
@@ -108,7 +113,7 @@ public class AbstractGenericProxyTest
     protected static byte[] toByteArray(InputStream is) throws IOException {
         ByteArrayOutputStream output = new ByteArrayOutputStream();
         try {
-            byte[] b = new byte[2014*3];
+            byte[] b = new byte[2014 * 3];
             int n = 0;
             while ((n = is.read(b)) != -1) {
                 output.write(b, 0, n);
@@ -119,121 +124,105 @@ public class AbstractGenericProxyTest
         }
     }
 
-    protected CloseableHttpClient proxiedHttp(final String user, final String pass )
-            throws Exception
-    {
+    protected CloseableHttpClient proxiedHttp(final String user, final String pass)
+            throws Exception {
         return proxiedHttp(user, pass, null);
     }
 
-    protected CloseableHttpClient proxiedHttp(final String user, final String pass, SSLSocketFactory socketFactory )
-            throws Exception
-    {
+    protected CloseableHttpClient proxiedHttp(final String user, final String pass, SSLSocketFactory socketFactory)
+            throws Exception {
         CredentialsProvider creds = null;
 
-        if ( user != null )
-        {
+        if (user != null) {
             creds = new BasicCredentialsProvider();
-            creds.setCredentials( new AuthScope( HOST, proxyPort ), new UsernamePasswordCredentials( user, pass ) );
+            creds.setCredentials(new AuthScope(HOST, proxyPort), new UsernamePasswordCredentials(user, pass));
         }
 
-        HttpHost proxy = new HttpHost( HOST, proxyPort );
+        HttpHost proxy = new HttpHost(HOST, proxyPort);
 
-        final HttpRoutePlanner planner = new DefaultProxyRoutePlanner( proxy );
+        final HttpRoutePlanner planner = new DefaultProxyRoutePlanner(proxy);
         HttpClientBuilder builder = HttpClients.custom()
-                .setRoutePlanner( planner )
-                .setDefaultCredentialsProvider( creds )
-                .setProxy( proxy )
-                .setSSLSocketFactory( socketFactory );
+                .setRoutePlanner(planner)
+                .setDefaultCredentialsProvider(creds)
+                .setProxy(proxy)
+                .setSSLSocketFactory(socketFactory);
 
         return builder.build();
     }
 
-    protected HttpClientContext proxyContext(final String user, final String pass )
-    {
+    protected HttpClientContext proxyContext(final String user, final String pass) {
         final CredentialsProvider creds = new BasicCredentialsProvider();
-        creds.setCredentials( new AuthScope( HOST, proxyPort ), new UsernamePasswordCredentials( user, pass ) );
+        creds.setCredentials(new AuthScope(HOST, proxyPort), new UsernamePasswordCredentials(user, pass));
         final HttpClientContext ctx = HttpClientContext.create();
-        ctx.setCredentialsProvider( creds );
+        ctx.setCredentialsProvider(creds);
 
         return ctx;
     }
 
-    protected String get( String url, boolean withCACert, String user, String pass ) throws Exception
-    {
+    protected String get(String url, boolean withCACert, String user, String pass) throws Exception {
         CloseableHttpClient client;
 
-        if ( withCACert )
-        {
-            File jks = new File( etcDir, "ssl/ca.jks" );
-            KeyStore trustStore = getTrustStore( jks );
-            SSLSocketFactory socketFactory = new SSLSocketFactory( trustStore );
-            client = proxiedHttp( user, pass, socketFactory );
-        }
-        else
-        {
-            client = proxiedHttp( user, pass );
+        if (withCACert) {
+            File jks = new File(etcDir, "ssl/ca.jks");
+            KeyStore trustStore = getTrustStore(jks);
+            SSLSocketFactory socketFactory = new SSLSocketFactory(trustStore);
+            client = proxiedHttp(user, pass, socketFactory);
+        } else {
+            client = proxiedHttp(user, pass);
         }
 
-        HttpGet get = new HttpGet( url );
+        HttpGet get = new HttpGet(url);
         CloseableHttpResponse response = null;
 
         InputStream stream = null;
-        try
-        {
-            response = client.execute( get, proxyContext( user, pass ) );
+        try {
+            response = client.execute(get, proxyContext(user, pass));
             StatusLine status = response.getStatusLine();
-            System.out.println( "status >>>> " + status );
+            System.out.println("status >>>> " + status);
 
-            if ( status.getStatusCode() == 404 )
-            {
+            if (status.getStatusCode() == 404) {
                 return status.toString();
             }
 
             stream = response.getEntity().getContent();
-            final String resulting = IOUtils.toString( stream );
+            final String resulting = IOUtils.toString(stream);
 
-            assertThat( resulting, notNullValue() );
-            System.out.println( "\n\n>>>>>>>\n\n" + resulting + "\n\n" );
+            assertThat(resulting, notNullValue());
+            System.out.println("\n\n>>>>>>>\n\n" + resulting + "\n\n");
 
             return resulting;
-        }
-        finally
-        {
-            IOUtils.closeQuietly( stream );
+        } finally {
+            IOUtils.closeQuietly(stream);
             //HttpResources.cleanupResources( get, response, client );
         }
     }
 
-    protected KeyStore getTrustStore( File jks ) throws Exception
-    {
-        KeyStore trustStore = KeyStore.getInstance( KeyStore.getDefaultType() );
-        try (FileInputStream instream = new FileInputStream( jks ))
-        {
-            trustStore.load( instream, "passwd".toCharArray() );
+    protected KeyStore getTrustStore(File jks) throws Exception {
+        KeyStore trustStore = KeyStore.getInstance(KeyStore.getDefaultType());
+        try (FileInputStream instream = new FileInputStream(jks)) {
+            trustStore.load(instream, "passwd".toCharArray());
         }
         return trustStore;
     }
 
-    protected static void initTestData() throws IOException
-    {
-        copyToConfigFile( "ssl/ca.der", "ssl/ca.der" );
-        copyToConfigFile( "ssl/ca.crt", "ssl/ca.crt" );
-        copyToConfigFile( "ssl/ca.jks", "ssl/ca.jks" );
+    protected static void initTestData() throws IOException {
+        copyToConfigFile("ssl/ca.der", "ssl/ca.der");
+        copyToConfigFile("ssl/ca.crt", "ssl/ca.crt");
+        copyToConfigFile("ssl/ca.jks", "ssl/ca.jks");
     }
 
-    protected static void copyToConfigFile( String resourcePath, String path ) throws IOException
-    {
-        File file = new File( etcDir, path );
+    protected static void copyToConfigFile(String resourcePath, String path) throws IOException {
+        File file = new File(etcDir, path);
         file.getParentFile().mkdirs();
         FileUtils.copyInputStreamToFile(
-                Thread.currentThread().getContextClassLoader().getResourceAsStream( resourcePath ), file );
+                Thread.currentThread().getContextClassLoader().getResourceAsStream(resourcePath),
+                file);
     }
 
-    protected String loadResource(String resource) throws IOException
-    {
-        final InputStream stream = Thread.currentThread().getContextClassLoader().getResourceAsStream( resource );
+    protected String loadResource(String resource) throws IOException {
+        final InputStream stream = Thread.currentThread().getContextClassLoader().getResourceAsStream(resource);
         assert stream != null;
-        return IOUtils.toString( stream, StandardCharsets.UTF_8);
+        return IOUtils.toString(stream, StandardCharsets.UTF_8);
     }
 
 }

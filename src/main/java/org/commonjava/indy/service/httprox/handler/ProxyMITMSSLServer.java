@@ -15,15 +15,12 @@
  */
 package org.commonjava.indy.service.httprox.handler;
 
-import org.commonjava.indy.model.core.ArtifactStore;
-import org.commonjava.indy.service.httprox.config.ProxyConfiguration;
-import org.commonjava.indy.service.httprox.util.*;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import static jakarta.ws.rs.HttpMethod.GET;
+import static jakarta.ws.rs.HttpMethod.HEAD;
+import static org.commonjava.indy.service.httprox.util.CertUtils.*;
+import static org.commonjava.indy.service.httprox.util.HttpProxyConstants.GET_METHOD;
+import static org.commonjava.indy.service.httprox.util.PortFinder.findOpenPort;
 
-import javax.net.ssl.KeyManagerFactory;
-import javax.net.ssl.SSLContext;
-import javax.net.ssl.SSLServerSocketFactory;
 import java.io.*;
 import java.net.*;
 import java.nio.channels.SocketChannel;
@@ -37,15 +34,18 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
-import static jakarta.ws.rs.HttpMethod.GET;
-import static jakarta.ws.rs.HttpMethod.HEAD;
-import static org.commonjava.indy.service.httprox.util.CertUtils.*;
-import static org.commonjava.indy.service.httprox.util.HttpProxyConstants.GET_METHOD;
-import static org.commonjava.indy.service.httprox.util.PortFinder.findOpenPort;
+import javax.net.ssl.KeyManagerFactory;
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.SSLServerSocketFactory;
 
-public class ProxyMITMSSLServer implements Runnable
-{
-    private final Logger logger = LoggerFactory.getLogger( getClass() );
+import org.commonjava.indy.model.core.ArtifactStore;
+import org.commonjava.indy.service.httprox.config.ProxyConfiguration;
+import org.commonjava.indy.service.httprox.util.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+public class ProxyMITMSSLServer implements Runnable {
+    private final Logger logger = LoggerFactory.getLogger(getClass());
 
     private static final int FIND_OPEN_PORT_MAX_RETRIES = 16;
 
@@ -79,9 +79,15 @@ public class ProxyMITMSSLServer implements Runnable
 
     private final static long MAX_WAIT_TIME_IN_MILLIS = 60 * 1000;
 
-    public ProxyMITMSSLServer( String host, int port, String trackingId, UserPass proxyUserPass,
-                               ProxyResponseHelper proxyResponseHelper, ProxyConfiguration config, ProxyMeter meter, HttpConduitWrapper httpConduitWrapper)
-    {
+    public ProxyMITMSSLServer(
+            String host,
+            int port,
+            String trackingId,
+            UserPass proxyUserPass,
+            ProxyResponseHelper proxyResponseHelper,
+            ProxyConfiguration config,
+            ProxyMeter meter,
+            HttpConduitWrapper httpConduitWrapper) {
         this.host = host;
         this.port = port;
         this.trackingId = trackingId;
@@ -93,51 +99,36 @@ public class ProxyMITMSSLServer implements Runnable
     }
 
     @Override
-    public void run()
-    {
-        try
-        {
+    public void run() {
+        try {
             execute();
-        }
-        catch ( Exception e )
-        {
-            logger.warn( "Execution failed", e );
-        }
-        finally
-        {
-            if ( sslTunnel != null )
-            {
+        } catch (Exception e) {
+            logger.warn("Execution failed", e);
+        } finally {
+            if (sslTunnel != null) {
                 long startTime = System.currentTimeMillis();
-                while ( !sslTunnel.isClosed() )
-                {
-                    if (System.currentTimeMillis() - startTime > MAX_WAIT_TIME_IN_MILLIS)
-                    {
+                while (!sslTunnel.isClosed()) {
+                    if (System.currentTimeMillis() - startTime > MAX_WAIT_TIME_IN_MILLIS) {
                         logger.warn("Maximum wait time exceeded, stopping wait for SSL tunnel to close.");
                         break;
                     }
-                    try
-                    {
+                    try {
                         logger.info("Waiting ssl tunnel to finish...");
-                        TimeUnit.MILLISECONDS.sleep( GET_SOCKET_CHANNEL_WAIT_TIME_IN_MILLISECONDS );
-                    }
-                    catch (InterruptedException e)
-                    {
+                        TimeUnit.MILLISECONDS.sleep(GET_SOCKET_CHANNEL_WAIT_TIME_IN_MILLISECONDS);
+                    } catch (InterruptedException e) {
                         e.printStackTrace();
                     }
                 }
 
-                if (sslTunnel.isClosed())
-                {
+                if (sslTunnel.isClosed()) {
                     logger.info("SSL tunnel is closed.");
-                }
-                else
-                {
+                } else {
                     logger.warn("SSL tunnel is still not closed after maximum wait time.");
                 }
             }
 
             closeProperly();
-            logger.debug( "MITM server closed" );
+            logger.debug("MITM server closed");
         }
     }
 
@@ -145,16 +136,11 @@ public class ProxyMITMSSLServer implements Runnable
      * Close the MIMT server properly when it is completed or broken. This will close sinkChannel and
      * consequently close sourceChannel via sinkChannel.getCloseSetter().set(...) in ProxyResponseWriter.
      */
-    private void closeProperly()
-    {
-        if (httpConduitWrapper.isOpen())
-        {
-            try
-            {
+    private void closeProperly() {
+        if (httpConduitWrapper.isOpen()) {
+            try {
                 httpConduitWrapper.close();
-            }
-            catch (IOException e)
-            {
+            } catch (IOException e) {
                 logger.warn("Close conduit failed", e);
             }
         }
@@ -170,133 +156,112 @@ public class ProxyMITMSSLServer implements Runnable
     /**
      * Generate the keystore on-the-fly and initiate SSL socket factory.
      */
-    private SSLServerSocketFactory getSSLServerSocketFactory(String host ) throws Exception
-    {
+    private SSLServerSocketFactory getSSLServerSocketFactory(String host) throws Exception {
         AtomicReference<Exception> err = new AtomicReference<>();
-        HostContext context = hostContextMap.computeIfAbsent( host, (k) -> {
-            try
-            {
+        HostContext context = hostContextMap.computeIfAbsent(host, (k) -> {
+            try {
                 final KeyStore ks = getKeyStore(k);
-                final KeyManagerFactory kmf = KeyManagerFactory.getInstance( KeyManagerFactory.getDefaultAlgorithm() );
-                kmf.init( ks, keystorePassword );
+                final KeyManagerFactory kmf = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());
+                kmf.init(ks, keystorePassword);
 
-                final SSLContext sc = SSLContext.getInstance( "TLS" );
-                sc.init( kmf.getKeyManagers(), null, null );
+                final SSLContext sc = SSLContext.getInstance("TLS");
+                sc.init(kmf.getKeyManagers(), null, null);
                 final SSLServerSocketFactory factory = sc.getServerSocketFactory();
                 return new HostContext(ks, factory);
-            }
-            catch ( Exception e )
-            {
-                err.set( e );
+            } catch (Exception e) {
+                err.set(e);
             }
             return null;
-        } );
-        if ( context == null || err.get() != null )
-        {
+        });
+        if (context == null || err.get() != null) {
             throw err.get();
         }
 
         return context.getSslSocketFactory();
     }
 
-    private KeyStore getKeyStore( String host ) throws Exception
-    {
-        PrivateKey caKey = getPrivateKey( config.getMITMCAKey() );
-        X509Certificate caCert = loadX509Certificate( new File( config.getMITMCACert() ));
+    private KeyStore getKeyStore(String host) throws Exception {
+        PrivateKey caKey = getPrivateKey(config.getMITMCAKey());
+        X509Certificate caCert = loadX509Certificate(new File(config.getMITMCACert()));
 
-        String dn = config.getMITMDNTemplate().replace( "<host>", host ); // e.g., "CN=<host>, O=Test Org"
+        String dn = config.getMITMDNTemplate().replace("<host>", host); // e.g., "CN=<host>, O=Test Org"
 
-        CertificateAndKeys certificateAndKeys = createSignedCertificateAndKey( dn, caCert, caKey, false );
+        CertificateAndKeys certificateAndKeys = createSignedCertificateAndKey(dn, caCert, caKey, false);
         Certificate signedCertificate = certificateAndKeys.getCertificate();
-        logger.debug( "Create signed cert:\n" + signedCertificate.toString() );
+        logger.debug("Create signed cert:\n" + signedCertificate.toString());
 
         KeyStore ks = createKeyStore();
         String alias = host;
-        ks.setKeyEntry( alias, certificateAndKeys.getPrivateKey(), keystorePassword, new Certificate[] { signedCertificate, caCert } );
+        ks.setKeyEntry(
+                alias,
+                certificateAndKeys.getPrivateKey(),
+                keystorePassword,
+                new Certificate[] { signedCertificate, caCert });
         return ks;
     }
 
-    private void execute() throws Exception
-    {
+    private void execute() throws Exception {
         ProxyMeter meter = null;
-        SSLServerSocketFactory sslServerSocketFactory = getSSLServerSocketFactory( host );
+        SSLServerSocketFactory sslServerSocketFactory = getSSLServerSocketFactory(host);
 
-        serverPort = findOpenPort( FIND_OPEN_PORT_MAX_RETRIES );
+        serverPort = findOpenPort(FIND_OPEN_PORT_MAX_RETRIES);
 
         // TODO: What is the performance implication of opening a new server socket each time? Should we try to cache these?
-        try ( ServerSocket sslServerSocket = sslServerSocketFactory.createServerSocket( serverPort ) )
-        {
-            sslServerSocket.setSoTimeout( ACCEPT_SOCKET_TIMEOUT_IN_MILLISECONDS ); //in case the response handler times out
+        try (ServerSocket sslServerSocket = sslServerSocketFactory.createServerSocket(serverPort)) {
+            sslServerSocket.setSoTimeout(ACCEPT_SOCKET_TIMEOUT_IN_MILLISECONDS); //in case the response handler times out
             started = true;
-            logger.debug( "MITM server started, {}", sslServerSocket );
+            logger.debug("MITM server started, {}", sslServerSocket);
             long startNanos = System.nanoTime();
 
-            if ( !isCancelled )
-            {
-                try ( Socket socket = sslServerSocket.accept() )
-                {
+            if (!isCancelled) {
+                try (Socket socket = sslServerSocket.accept()) {
                     String method = null;
                     String requestLine = null;
 
-                    socket.setSoTimeout( (int) TimeUnit.MINUTES.toMillis( config.getMITMSoTimeoutMinutes() ) );
-                    logger.debug( "MITM server accepted" );
+                    socket.setSoTimeout((int) TimeUnit.MINUTES.toMillis(config.getMITMSoTimeoutMinutes()));
+                    logger.debug("MITM server accepted");
 
-                    try (BufferedReader in = new BufferedReader( new InputStreamReader( socket.getInputStream() ) ))
-                    {
+                    try (BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()))) {
                         // TODO: Should we implement a while loop around this with some sort of read timeout, in case multiple requests are inlined?
                         // In principle, any sort of network communication is permitted over this port, but even if we restrict this to
                         // HTTPS only, couldn't there be multiple requests over the port at a time?
                         String path = null;
                         StringBuilder sb = new StringBuilder();
                         String line;
-                        while ( ( line = in.readLine() ) != null )
-                        {
+                        while ((line = in.readLine()) != null) {
                             sb.append(line).append("\n");
-                            if ( line.startsWith( GET ) || line.startsWith( HEAD ) ) // only care about GET/HEAD
+                            if (line.startsWith(GET) || line.startsWith(HEAD)) // only care about GET/HEAD
                             {
                                 String[] toks = line.split("\\s+");
                                 method = toks[0];
                                 path = toks[1];
                                 requestLine = line;
-                            }
-                            else if ( line.isEmpty() )
-                            {
-                                logger.debug( "Get empty line and break" );
+                            } else if (line.isEmpty()) {
+                                logger.debug("Get empty line and break");
                                 break;
                             }
                         }
-                        meter = meterTemplate.copy( startNanos, method, requestLine );
+                        meter = meterTemplate.copy(startNanos, method, requestLine);
 
-                        logger.debug( "Request:\n{}", sb );
+                        logger.debug("Request:\n{}", sb);
 
-                        if ( path != null )
-                        {
-                            try
-                            {
-                                transferRemote( socket, host, port, method, path, meter );
+                        if (path != null) {
+                            try {
+                                transferRemote(socket, host, port, method, path, meter);
+                            } catch (Exception e) {
+                                logger.error("Transfer remote failed", e);
                             }
-                            catch ( Exception e )
-                            {
-                                logger.error( "Transfer remote failed", e );
-                            }
+                        } else {
+                            logger.debug("MITM server failed to get request from client");
                         }
-                        else
-                        {
-                            logger.debug( "MITM server failed to get request from client" );
-                        }
-                    }
-                    catch ( Exception e )
-                    {
-                        logger.error( "Exception failed with client hostname: {}, on port: {}.", host, port, e );
+                    } catch (Exception e) {
+                        logger.error("Exception failed with client hostname: {}, on port: {}.", host, port, e);
                         sendError(socket, e);
                     }
                 }
             }
-        }
-        finally
-        {
-            if (meter != null)
-            {
+        } finally {
+            if (meter != null) {
                 meter.reportResponseSummary();
             }
             isCancelled = false;
@@ -304,101 +269,96 @@ public class ProxyMITMSSLServer implements Runnable
         }
     }
 
-    private void sendError(Socket socket, Exception e)
-    {
-        if ( !socket.isClosed() )
-        {
+    private void sendError(Socket socket, Exception e) {
+        if (!socket.isClosed()) {
             try (BufferedOutputStream out = new BufferedOutputStream(socket.getOutputStream());
-                 HttpConduitWrapper http = new HttpConduitWrapper(new OutputStreamSinkChannel(out), null))
-            {
+                    HttpConduitWrapper http = new HttpConduitWrapper(new OutputStreamSinkChannel(out), null)) {
                 http.writeError(e);
                 http.writeClose();
-            }
-            catch (IOException ex)
-            {
+            } catch (IOException ex) {
                 logger.error("Send error failed", e);
             }
         }
     }
 
-    private void transferRemote( Socket socket, String host, int port, String method, String file,
-                                 ProxyMeter meter ) throws Exception
-    {
+    private void transferRemote(
+            Socket socket,
+            String host,
+            int port,
+            String method,
+            String file,
+            ProxyMeter meter) throws Exception {
         String protocol = "https";
-        URL remoteUrl = new URL( protocol, host, port, file );
-        logger.debug( "Requesting remote URL: {}", remoteUrl );
+        URL remoteUrl = new URL(protocol, host, port, file);
+        logger.debug("Requesting remote URL: {}", remoteUrl);
 
-        ArtifactStore store = proxyResponseHelper.getArtifactStore( trackingId, remoteUrl );
-        try (BufferedOutputStream out = new BufferedOutputStream( socket.getOutputStream() );
-             HttpConduitWrapper http = new HttpConduitWrapper( new OutputStreamSinkChannel( out ), null ))
-        {
-            proxyResponseHelper.transfer( http, store, remoteUrl.getFile(), GET_METHOD.equals( method ),
-                    proxyUserPass, meter );
+        ArtifactStore store = proxyResponseHelper.getArtifactStore(trackingId, remoteUrl);
+        try (BufferedOutputStream out = new BufferedOutputStream(socket.getOutputStream());
+                HttpConduitWrapper http = new HttpConduitWrapper(new OutputStreamSinkChannel(out), null)) {
+            proxyResponseHelper.transfer(
+                    http,
+                    store,
+                    remoteUrl.getFile(),
+                    GET_METHOD.equals(method),
+                    proxyUserPass,
+                    meter);
             out.flush();
         }
     }
 
-    public SocketChannel getSocketChannel() throws InterruptedException, ExecutionException
-    {
-        for ( int i = 0; i < GET_SOCKET_CHANNEL_MAX_RETRIES; i++ )
-        {
-            logger.debug( "Try to get socket channel #{}", i + 1 );
-            if ( started )
-            {
-                logger.debug( "Server started" );
-                try
-                {
+    public SocketChannel getSocketChannel() throws InterruptedException, ExecutionException {
+        for (int i = 0; i < GET_SOCKET_CHANNEL_MAX_RETRIES; i++) {
+            logger.debug("Try to get socket channel #{}", i + 1);
+            if (started) {
+                logger.debug("Server started");
+                try {
                     return openSocketChannelToMITM();
+                } catch (IOException e) {
+                    throw new ExecutionException("Open socket channel to MITM failed", e);
                 }
-                catch ( IOException e )
-                {
-                    throw new ExecutionException( "Open socket channel to MITM failed", e );
-                }
-            }
-            else
-            {
-                logger.debug( "Server not started, wait..." );
-                TimeUnit.MILLISECONDS.sleep( GET_SOCKET_CHANNEL_WAIT_TIME_IN_MILLISECONDS );
+            } else {
+                logger.debug("Server not started, wait...");
+                TimeUnit.MILLISECONDS.sleep(GET_SOCKET_CHANNEL_WAIT_TIME_IN_MILLISECONDS);
             }
         }
         return null;
     }
 
-    private SocketChannel openSocketChannelToMITM() throws IOException
-    {
-        logger.debug( "Open socket channel to MITM server, localhost:{}", serverPort );
+    private SocketChannel openSocketChannelToMITM() throws IOException {
+        logger.debug("Open socket channel to MITM server, localhost:{}", serverPort);
 
-        InetSocketAddress target = new InetSocketAddress( "localhost", serverPort );
-        return SocketChannel.open( target );
+        InetSocketAddress target = new InetSocketAddress("localhost", serverPort);
+        return SocketChannel.open(target);
     }
 
     /**
      * Signal the request and response should be cancelled.
      */
-    public void stop()
-    {
+    public void stop() {
         isCancelled = true;
-        logger.debug( "MITM server timed out waiting for response creation" );
+        logger.debug("MITM server timed out waiting for response creation");
     }
 
-    class HostContext{
+    class HostContext {
         private KeyStore keystore;
         private SSLServerSocketFactory sslSocketFactory;
-        HostContext(KeyStore ks, SSLServerSocketFactory factory){
+
+        HostContext(KeyStore ks, SSLServerSocketFactory factory) {
             keystore = ks;
             sslSocketFactory = factory;
         }
+
         KeyStore getKeystore() {
             return keystore;
         }
+
         SSLServerSocketFactory getSslSocketFactory() {
             return sslSocketFactory;
         }
 
     }
 
-    public void setProxySSLTunnel( ProxySSLTunnel sslTunnel )
-    {
+    public void setProxySSLTunnel(ProxySSLTunnel sslTunnel) {
         this.sslTunnel = sslTunnel;
     }
 }
