@@ -15,7 +15,16 @@
  */
 package org.commonjava.service.httprox;
 
-import io.quarkus.test.junit.QuarkusTest;
+import static org.hamcrest.CoreMatchers.equalTo;
+import static org.hamcrest.CoreMatchers.notNullValue;
+import static org.hamcrest.MatcherAssert.assertThat;
+
+import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
+
+import jakarta.inject.Inject;
+import jakarta.ws.rs.WebApplicationException;
+
 import org.apache.commons.io.IOUtils;
 import org.apache.http.HttpHost;
 import org.apache.http.HttpStatus;
@@ -34,18 +43,10 @@ import org.commonjava.indy.service.httprox.client.repository.RepositoryService;
 import org.eclipse.microprofile.rest.client.inject.RestClient;
 import org.junit.jupiter.api.Test;
 
-import jakarta.inject.Inject;
-import jakarta.ws.rs.WebApplicationException;
-import java.io.InputStream;
-import java.nio.charset.StandardCharsets;
-
-import static org.hamcrest.CoreMatchers.equalTo;
-import static org.hamcrest.CoreMatchers.notNullValue;
-import static org.hamcrest.MatcherAssert.assertThat;
+import io.quarkus.test.junit.QuarkusTest;
 
 @QuarkusTest
-public class HttpProxyTest extends AbstractGenericProxyTest
-{
+public class HttpProxyTest extends AbstractGenericProxyTest {
 
     private static final String USER = "user";
 
@@ -61,28 +62,24 @@ public class HttpProxyTest extends AbstractGenericProxyTest
 
     @Test
     public void proxySimplePomAndAutoCreateRemoteRepo()
-            throws Exception
-    {
+            throws Exception {
         final String url = "http://remote.example:80/test/org/test/simple/1/simple.pom";
         final String testPomContents = loadResource("simple.pom");
 
-        final HttpGet get = new HttpGet( url );
+        final HttpGet get = new HttpGet(url);
         final CloseableHttpClient client = proxiedHttp();
         CloseableHttpResponse response = null;
 
         InputStream stream = null;
-        try
-        {
-            response = client.execute( get, proxyContext( USER, PASS ) );
+        try {
+            response = client.execute(get, proxyContext(USER, PASS));
             stream = response.getEntity().getContent();
-            final String resultingPom = IOUtils.toString( stream );
+            final String resultingPom = IOUtils.toString(stream);
 
-            assertThat( resultingPom, notNullValue() );
-            assertThat( resultingPom, equalTo( testPomContents ) );
-        }
-        finally
-        {
-            IOUtils.closeQuietly( stream );
+            assertThat(resultingPom, notNullValue());
+            assertThat(resultingPom, equalTo(testPomContents));
+        } finally {
+            IOUtils.closeQuietly(stream);
         }
     }
 
@@ -92,73 +89,61 @@ public class HttpProxyTest extends AbstractGenericProxyTest
      */
     @Test
     public void proxySimplePomWithQueryParameter()
-            throws Exception
-    {
+            throws Exception {
         final String url = "http://remote.example:80/org/test/simple.pom?version=2.0";
         final String testPomContents = loadResource("simple-2.0.pom");
 
-        final HttpGet get = new HttpGet( url );
+        final HttpGet get = new HttpGet(url);
         final CloseableHttpClient client = proxiedHttp();
         InputStream stream = null;
-        try
-        {
-            CloseableHttpResponse response = client.execute( get, proxyContext( USER, PASS ) );
+        try {
+            CloseableHttpResponse response = client.execute(get, proxyContext(USER, PASS));
             stream = response.getEntity().getContent();
-            final String resultingPom = IOUtils.toString( stream, StandardCharsets.UTF_8);
+            final String resultingPom = IOUtils.toString(stream, StandardCharsets.UTF_8);
 
-            assertThat( resultingPom, notNullValue() );
-            assertThat( resultingPom, equalTo( testPomContents ) );
-        }
-        finally
-        {
-            IOUtils.closeQuietly( stream );
+            assertThat(resultingPom, notNullValue());
+            assertThat(resultingPom, equalTo(testPomContents));
+        } finally {
+            IOUtils.closeQuietly(stream);
         }
     }
 
     @Test
     public void proxy404()
-            throws Exception
-    {
+            throws Exception {
         final String testRepo = "test";
 
         final String url = "http://remote.example:80/test/org/test/simple/1/simple-1.pom";
 
-        final HttpGet get = new HttpGet( url );
+        final HttpGet get = new HttpGet(url);
         final CloseableHttpClient client = proxiedHttp();
         CloseableHttpResponse response = null;
 
         final InputStream stream = null;
-        try
-        {
-            response = client.execute( get, proxyContext( USER, PASS ) );
-        }
-        catch ( WebApplicationException e )
-        {
-            assertThat( e.getResponse().getStatus(), equalTo( HttpStatus.SC_NOT_FOUND ) );
-        }
-        finally
-        {
-            IOUtils.closeQuietly( stream );
+        try {
+            response = client.execute(get, proxyContext(USER, PASS));
+        } catch (WebApplicationException e) {
+            assertThat(e.getResponse().getStatus(), equalTo(HttpStatus.SC_NOT_FOUND));
+        } finally {
+            IOUtils.closeQuietly(stream);
             //HttpUtil.cleanupResources( client, get, response );
         }
 
     }
 
-    protected HttpClientContext proxyContext(final String user, final String pass )
-    {
+    protected HttpClientContext proxyContext(final String user, final String pass) {
         final CredentialsProvider creds = new BasicCredentialsProvider();
-        creds.setCredentials( new AuthScope( HOST, proxyPort ), new UsernamePasswordCredentials( user, pass ) );
+        creds.setCredentials(new AuthScope(HOST, proxyPort), new UsernamePasswordCredentials(user, pass));
         final HttpClientContext ctx = HttpClientContext.create();
-        ctx.setCredentialsProvider( creds );
+        ctx.setCredentialsProvider(creds);
 
         return ctx;
     }
 
     protected CloseableHttpClient proxiedHttp()
-            throws Exception
-    {
-        final HttpRoutePlanner planner = new DefaultProxyRoutePlanner( new HttpHost( HOST, proxyPort ) );
-        return HttpClients.custom().setRoutePlanner( planner ).build();
+            throws Exception {
+        final HttpRoutePlanner planner = new DefaultProxyRoutePlanner(new HttpHost(HOST, proxyPort));
+        return HttpClients.custom().setRoutePlanner(planner).build();
     }
 
 }

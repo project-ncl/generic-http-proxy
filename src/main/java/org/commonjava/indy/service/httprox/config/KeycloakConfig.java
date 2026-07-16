@@ -15,16 +15,17 @@
  */
 package org.commonjava.indy.service.httprox.config;
 
-import io.quarkus.runtime.Startup;
-import org.eclipse.microprofile.config.inject.ConfigProperty;
+import java.util.Properties;
 
 import jakarta.enterprise.context.ApplicationScoped;
-import java.util.Properties;
+
+import org.eclipse.microprofile.config.inject.ConfigProperty;
+
+import io.quarkus.runtime.Startup;
 
 @Startup
 @ApplicationScoped
-public class KeycloakConfig
-{
+public class KeycloakConfig {
 
     private static final boolean DEFAULT_ENABLED = false;
 
@@ -52,7 +53,7 @@ public class KeycloakConfig
 
     public static final String KEYCLOAK_REALM_PUBLIC_KEY = "keycloak.realmPublicKey";
 
-    @ConfigProperty( name = "auth.realm", defaultValue = DEFAULT_REALM )
+    @ConfigProperty(name = "auth.realm", defaultValue = DEFAULT_REALM)
     public String realm;
 
     @ConfigProperty(name = "auth.enabled")
@@ -82,158 +83,129 @@ public class KeycloakConfig
     @ConfigProperty(name = "auth.public-key")
     public String realmPublicKey;
 
-    public boolean isEnabled()
-    {
+    public boolean isEnabled() {
         return enabled == null ? DEFAULT_ENABLED : enabled;
     }
 
-    public void setEnabled( final Boolean enabled )
-    {
+    public void setEnabled(final Boolean enabled) {
         this.enabled = enabled;
     }
 
-    public String getRealm()
-    {
+    public String getRealm() {
         return realm == null ? DEFAULT_REALM : realm;
     }
 
-    public void setRealm( final String realm )
-    {
+    public void setRealm(final String realm) {
         this.realm = realm;
     }
 
-    public String getKeycloakJson()
-    {
-        if ( keycloakJson == null )
-        {
-            return getDefaultConfFile( DEFAULT_KEYCLOAK_JSON );
+    public String getKeycloakJson() {
+        if (keycloakJson == null) {
+            return getDefaultConfFile(DEFAULT_KEYCLOAK_JSON);
         }
 
         return keycloakJson;
     }
 
-    public void setKeycloakJson( final String keycloakJson )
-    {
+    public void setKeycloakJson(final String keycloakJson) {
         this.keycloakJson = keycloakJson;
     }
 
-    public String getKeycloakUiJson()
-    {
-        if ( keycloakUiJson == null )
-        {
-            return getDefaultConfFile( DEFAULT_KEYCLOAK_UI_JSON );
+    public String getKeycloakUiJson() {
+        if (keycloakUiJson == null) {
+            return getDefaultConfFile(DEFAULT_KEYCLOAK_UI_JSON);
         }
 
         return keycloakUiJson;
     }
 
-    public void setKeycloakUiJson( final String keycloakUiJson )
-    {
+    public void setKeycloakUiJson(final String keycloakUiJson) {
         this.keycloakUiJson = keycloakUiJson;
     }
 
-    public String getSecurityBindingsJson()
-    {
-        if ( securityBindingsJson == null )
-        {
-            return getDefaultConfFile( DEFAULT_SECURITY_BINDINGS_JSON );
+    public String getSecurityBindingsJson() {
+        if (securityBindingsJson == null) {
+            return getDefaultConfFile(DEFAULT_SECURITY_BINDINGS_JSON);
         }
 
         return securityBindingsJson;
     }
 
-    public void setSecurityBindingsJson( final String securityConstraintsJson )
-    {
+    public void setSecurityBindingsJson(final String securityConstraintsJson) {
         this.securityBindingsJson = securityConstraintsJson;
     }
 
     /**
      * Set system properties for keycloak to use when filtering keycloak.json...
      */
-    public KeycloakConfig setSystemProperties()
-    {
-        if ( !isEnabled() )
-        {
+    public KeycloakConfig setSystemProperties() {
+        if (!isEnabled()) {
             return this;
         }
 
         final Properties properties = System.getProperties();
-        properties.setProperty( KEYCLOAK_REALM, getRealm() );
-        properties.setProperty( KEYCLOAK_URL, getUrl() );
+        properties.setProperty(KEYCLOAK_REALM, getRealm());
+        properties.setProperty(KEYCLOAK_URL, getUrl());
 
-        if ( getServerResource() != null )
-        {
-            properties.setProperty( KEYCLOAK_SERVER_RESOURCE, getServerResource() );
+        if (getServerResource() != null) {
+            properties.setProperty(KEYCLOAK_SERVER_RESOURCE, getServerResource());
         }
 
-        if ( getServerCredentialSecret() != null )
-        {
-            properties.setProperty( KEYCLOAK_SERVER_CREDENTIAL_SECRET, getServerCredentialSecret() );
+        if (getServerCredentialSecret() != null) {
+            properties.setProperty(KEYCLOAK_SERVER_CREDENTIAL_SECRET, getServerCredentialSecret());
         }
 
-        if ( getRealmPublicKey() != null )
-        {
-            properties.setProperty( KEYCLOAK_REALM_PUBLIC_KEY, getRealmPublicKey() );
+        if (getRealmPublicKey() != null) {
+            properties.setProperty(KEYCLOAK_REALM_PUBLIC_KEY, getRealmPublicKey());
         }
 
-        System.setProperties( properties );
+        System.setProperties(properties);
 
         return this;
     }
 
-    private String getDefaultConfFile( final String confFile )
-    {
+    private String getDefaultConfFile(final String confFile) {
         //TODO
         return "";
     }
 
-    public String getUrl()
-    {
+    public String getUrl() {
         return url;
     }
 
-    public void setUrl( final String url )
-    {
+    public void setUrl(final String url) {
         this.url = url;
     }
 
-    public String getServerCredentialSecret()
-    {
+    public String getServerCredentialSecret() {
         return serverCredentialSecret;
     }
 
-    public void setServerCredentialSecret( final String serverCredentialSecret )
-    {
+    public void setServerCredentialSecret(final String serverCredentialSecret) {
         this.serverCredentialSecret = serverCredentialSecret;
     }
 
-    public String getServerResource()
-    {
+    public String getServerResource() {
         return serverResource == null ? DEFAULT_SERVER_RESOURCE : serverResource;
     }
 
-    public void setServerResource( final String serverResource )
-    {
+    public void setServerResource(final String serverResource) {
         this.serverResource = serverResource;
     }
 
-    public String getUiResource()
-    {
+    public String getUiResource() {
         return uiResource == null ? DEFAULT_UI_RESOURCE : uiResource;
     }
 
-    public void setUiResource( final String uiResource )
-    {
+    public void setUiResource(final String uiResource) {
         this.uiResource = uiResource;
     }
 
-    public String getRealmPublicKey()
-    {
+    public String getRealmPublicKey() {
         return realmPublicKey;
     }
 
-    public void setRealmPublicKey( final String realmPublicKey )
-    {
+    public void setRealmPublicKey(final String realmPublicKey) {
         this.realmPublicKey = realmPublicKey;
     }
 

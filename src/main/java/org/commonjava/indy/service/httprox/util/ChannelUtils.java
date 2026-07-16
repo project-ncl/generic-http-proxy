@@ -15,13 +15,13 @@
  */
 package org.commonjava.indy.service.httprox.util;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.xnio.channels.StreamSinkChannel;
-
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.WritableByteChannel;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.xnio.channels.StreamSinkChannel;
 
 public class ChannelUtils {
     public static final int DEFAULT_READ_BUF_SIZE = 1024 * 32;
@@ -48,25 +48,20 @@ public class ChannelUtils {
 
     public static void write(WritableByteChannel channel, ByteBuffer bbuf) throws IOException {
         int retry = 0;
-        while ( bbuf.hasRemaining() && retry < MAX_WRITE_RETRY_COUNT )
-        {
-            int written = channel.write( bbuf );
+        while (bbuf.hasRemaining() && retry < MAX_WRITE_RETRY_COUNT) {
+            int written = channel.write(bbuf);
 
-            if ( written == 0 )
-            {
+            if (written == 0) {
                 // The channel is non-blocking and couldn't write anything at the moment.
                 wait(100);
                 retry++;
-            }
-            else
-            {
+            } else {
                 retry = 0; // Reset retry if some data was successfully written
             }
         }
 
-        if ( retry >= MAX_WRITE_RETRY_COUNT )
-        {
-            throw new IOException( "Exceeded maximum write retry." );
+        if (retry >= MAX_WRITE_RETRY_COUNT) {
+            throw new IOException("Exceeded maximum write retry.");
         }
     }
 

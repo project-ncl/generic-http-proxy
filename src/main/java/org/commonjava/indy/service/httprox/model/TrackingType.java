@@ -15,8 +15,7 @@
  */
 package org.commonjava.indy.service.httprox.model;
 
-public enum TrackingType
-{
+public enum TrackingType {
 
     SUFFIX, ALWAYS, NEVER;
 

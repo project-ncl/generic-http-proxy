@@ -15,11 +15,8 @@
  */
 package org.commonjava.indy.service.httprox.handler;
 
-import org.commonjava.indy.service.httprox.config.ProxyConfiguration;
-import org.commonjava.indy.service.httprox.util.ChannelUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.xnio.conduits.ConduitStreamSinkChannel;
+import static org.commonjava.indy.service.httprox.util.ChannelUtils.DEFAULT_READ_BUF_SIZE;
+import static org.commonjava.indy.service.httprox.util.ChannelUtils.flush;
 
 import java.io.BufferedInputStream;
 import java.io.IOException;
@@ -30,12 +27,14 @@ import java.nio.channels.ReadableByteChannel;
 import java.nio.channels.SocketChannel;
 import java.util.concurrent.TimeUnit;
 
-import static org.commonjava.indy.service.httprox.util.ChannelUtils.DEFAULT_READ_BUF_SIZE;
-import static org.commonjava.indy.service.httprox.util.ChannelUtils.flush;
+import org.commonjava.indy.service.httprox.config.ProxyConfiguration;
+import org.commonjava.indy.service.httprox.util.ChannelUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.xnio.conduits.ConduitStreamSinkChannel;
 
-public class ProxySSLTunnel implements Runnable
-{
-    private final Logger logger = LoggerFactory.getLogger( getClass() );
+public class ProxySSLTunnel implements Runnable {
+    private final Logger logger = LoggerFactory.getLogger(getClass());
 
     //private volatile Selector selector; // selecting READ events for target channel
 
@@ -49,58 +48,49 @@ public class ProxySSLTunnel implements Runnable
 
     private final ProxyConfiguration config;
 
-    public ProxySSLTunnel( ConduitStreamSinkChannel sinkChannel, SocketChannel socketChannel, ProxyConfiguration config )
-    {
+    public ProxySSLTunnel(
+            ConduitStreamSinkChannel sinkChannel,
+            SocketChannel socketChannel,
+            ProxyConfiguration config) {
         this.sinkChannel = sinkChannel;
         this.socketChannel = socketChannel;
         this.config = config;
     }
 
     @Override
-    public void run()
-    {
-        try
-        {
-            pipeTargetToSinkChannel( sinkChannel, socketChannel );
-        }
-        catch ( Exception e )
-        {
-            logger.error( "Pipe to sink channel failed", e );
+    public void run() {
+        try {
+            pipeTargetToSinkChannel(sinkChannel, socketChannel);
+        } catch (Exception e) {
+            logger.error("Pipe to sink channel failed", e);
         }
     }
 
-    private void pipeTargetToSinkChannel( ConduitStreamSinkChannel sinkChannel, SocketChannel targetChannel )
-            throws IOException
-    {
-        targetChannel.socket().setSoTimeout( (int) TimeUnit.MINUTES.toMillis( config.getMITMSoTimeoutMinutes() ) );
-        InputStream inStream = new BufferedInputStream( targetChannel.socket().getInputStream() );
-        ReadableByteChannel wrappedChannel = Channels.newChannel( inStream );
+    private void pipeTargetToSinkChannel(ConduitStreamSinkChannel sinkChannel, SocketChannel targetChannel)
+            throws IOException {
+        targetChannel.socket().setSoTimeout((int) TimeUnit.MINUTES.toMillis(config.getMITMSoTimeoutMinutes()));
+        InputStream inStream = new BufferedInputStream(targetChannel.socket().getInputStream());
+        ReadableByteChannel wrappedChannel = Channels.newChannel(inStream);
 
-        ByteBuffer byteBuffer = ByteBuffer.allocate( DEFAULT_READ_BUF_SIZE );
+        ByteBuffer byteBuffer = ByteBuffer.allocate(DEFAULT_READ_BUF_SIZE);
 
         int total = 0;
-        while ( true )
-        {
-            if ( closed )
-            {
-                logger.debug( "Tunnel closed" );
+        while (true) {
+            if (closed) {
+                logger.debug("Tunnel closed");
                 break;
             }
 
             int read = -1;
-            try
-            {
-                read = wrappedChannel.read( byteBuffer );
-            }
-            catch ( IOException e )
-            {
-                logger.debug( "Read target channel breaks, {}", e.toString() );
+            try {
+                read = wrappedChannel.read(byteBuffer);
+            } catch (IOException e) {
+                logger.debug("Read target channel breaks, {}", e.toString());
                 break;
             }
 
-            if ( read <= 0 )
-            {
-                logger.debug( "Read breaks, read: {}", read );
+            if (read <= 0) {
+                logger.debug("Read breaks, read: {}", read);
                 break;
             }
 
@@ -110,18 +100,13 @@ public class ProxySSLTunnel implements Runnable
             //final byte[] bytes = new byte[byteBuffer.limit()];
             //byteBuffer.get( bytes );
 
-            logger.debug( "Write to sink channel, size: {}", byteBuffer.limit() );
-            try
-            {
-                ChannelUtils.write( sinkChannel, byteBuffer );
-            }
-            catch ( IOException e )
-            {
-                logger.debug( "Write to sink channel breaks, {}", e.toString() );
+            logger.debug("Write to sink channel, size: {}", byteBuffer.limit());
+            try {
+                ChannelUtils.write(sinkChannel, byteBuffer);
+            } catch (IOException e) {
+                logger.debug("Write to sink channel breaks, {}", e.toString());
                 break;
-            }
-            finally
-            {
+            } finally {
                 sinkChannel.flush();
                 byteBuffer.clear();
             }
@@ -129,9 +114,9 @@ public class ProxySSLTunnel implements Runnable
             total += read;
         }
 
-        logger.debug( "Write to sink channel complete, transferred: {}", total );
+        logger.debug("Write to sink channel complete, transferred: {}", total);
 
-        flush( sinkChannel );
+        flush(sinkChannel);
         sinkChannel.shutdownWrites();
         sinkChannel.close();
 
@@ -139,26 +124,20 @@ public class ProxySSLTunnel implements Runnable
 
     }
 
-    public void write( byte[] bytes ) throws IOException
-    {
-        socketChannel.write( ByteBuffer.wrap( bytes ) );
+    public void write(byte[] bytes) throws IOException {
+        socketChannel.write(ByteBuffer.wrap(bytes));
     }
 
-    public void close()
-    {
-        try
-        {
+    public void close() {
+        try {
             //selector.close(); // wake it up to complete the tunnel
             socketChannel.close();
-        }
-        catch ( IOException e )
-        {
-            logger.error( "Close tunnel selector failed", e );
+        } catch (IOException e) {
+            logger.error("Close tunnel selector failed", e);
         }
     }
 
-    public boolean isClosed()
-    {
+    public boolean isClosed() {
         return closed;
     }
 

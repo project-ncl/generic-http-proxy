@@ -15,6 +15,8 @@
  */
 package org.commonjava.indy.service.httprox.util;
 
+import java.util.function.Predicate;
+
 import org.commonjava.indy.model.core.ArtifactStore;
 import org.commonjava.indy.model.core.HostedRepository;
 import org.commonjava.indy.model.core.PathStyle;
@@ -24,23 +26,25 @@ import org.commonjava.indy.service.httprox.handler.AbstractProxyRepositoryCreato
 import org.commonjava.indy.service.httprox.handler.ProxyCreationResult;
 import org.slf4j.Logger;
 
-import java.util.function.Predicate;
-
-public class RepoCreator extends AbstractProxyRepositoryCreator
-{
+public class RepoCreator extends AbstractProxyRepositoryCreator {
     private ProxyConfiguration config;
-    public RepoCreator( ProxyConfiguration config )
-    {
+
+    public RepoCreator(ProxyConfiguration config) {
         this.config = config;
     }
 
-    public Predicate<ArtifactStore> getNameFilter(String name )
-    {
-        return store -> store.getName().startsWith( name );
+    public Predicate<ArtifactStore> getNameFilter(String name) {
+        return store -> store.getName().startsWith(name);
     }
 
     @Override
-    public ProxyCreationResult create(String trackingID, String name, String baseUrl, UrlInfo urlInfo, UserPass userPass, Logger logger) {
+    public ProxyCreationResult create(
+            String trackingID,
+            String name,
+            String baseUrl,
+            UrlInfo urlInfo,
+            UserPass userPass,
+            Logger logger) {
         ProxyCreationResult ret = new ProxyCreationResult();
         if (trackingID == null) {
             RemoteRepository remote = createRemote(name, baseUrl, urlInfo, userPass, logger);
@@ -64,10 +68,8 @@ public class RepoCreator extends AbstractProxyRepositoryCreator
     }
 
     @Override
-    protected PathStyle getPathStyle()
-    {
-        return PathStyle.valueOf( config.getStoragePathStyle() );
+    protected PathStyle getPathStyle() {
+        return PathStyle.valueOf(config.getStoragePathStyle());
     }
-
 
 }

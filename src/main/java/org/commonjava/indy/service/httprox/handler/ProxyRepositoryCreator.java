@@ -19,8 +19,7 @@ import org.commonjava.indy.service.httprox.util.UrlInfo;
 import org.commonjava.indy.service.httprox.util.UserPass;
 import org.slf4j.Logger;
 
-public interface ProxyRepositoryCreator
-{
+public interface ProxyRepositoryCreator {
     /**
      * It creates a normal remote repository when trackingID is null. It creates group, hosted, and remote
      * when trackingID != null.
@@ -36,8 +35,13 @@ public interface ProxyRepositoryCreator
      * @param logger
      * @return ProxyCreationResult containing the remote repo or (group, remote, hosted)
      */
-    ProxyCreationResult create(String trackingID, String name, String baseUrl, UrlInfo urlInfo, UserPass userPass,
-                               Logger logger );
+    ProxyCreationResult create(
+            String trackingID,
+            String name,
+            String baseUrl,
+            UrlInfo urlInfo,
+            UserPass userPass,
+            Logger logger);
 
     /**
      * Format repo names. By default, when trackingId is null, it returns "httproxy_host_port_index".
@@ -51,5 +55,5 @@ public interface ProxyRepositoryCreator
      * @param storeType group, remote, or hosted
      * @return
      */
-    String formatId( String host, int port, int index, String trackingID, String storeType );
+    String formatId(String host, int port, int index, String trackingID, String storeType);
 }
