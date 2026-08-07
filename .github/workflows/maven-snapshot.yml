@@ -1,0 +1,20 @@
+name: Build snapshot version and upload to Maven Central
+
+permissions: {}
+
+on:
+  push:
+    branches: [ "main" ]
+
+jobs:
+    call-snapshot-job:
+      # testing jib image again. switch back to tag when it's part of a release
+      uses: project-ncl/shared-github-actions/.github/workflows/maven-snapshot.yml@a27e6fba6b28bbb96881ec096e9c8ea5a538f481 # v0.0.22
+      with:
+        project_name: 'project-ncl/generic-http-proxy'
+        quarkus_jib_image: true
+      secrets:
+        SONATYPE_USERNAME: ${{ secrets.SONATYPE_USERNAME }}
+        SONATYPE_PASSWORD: ${{ secrets.SONATYPE_PASSWORD }}
+        QUAY_DEVEL_USERNAME: ${{ secrets.QUAY_DEVEL_USERNAME }}
+        QUAY_DEVEL_PASSWORD: ${{ secrets.QUAY_DEVEL_PASSWORD }}

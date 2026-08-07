@@ -1,3 +1,4 @@
+
 quarkus:
   http:
     port: 8080
@@ -27,6 +28,11 @@ quarkus:
     client-id: your_client_id
     credentials:
       secret: your_secret
+  container-image:
+    registry: quay.io
+    group: rh-newcastle-devel
+    name: generic-http-proxy
+    additional-tags: latest
 
 proxy:
   port: 8082

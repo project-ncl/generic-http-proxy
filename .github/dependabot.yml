@@ -1,19 +1,31 @@
-# To get started with Dependabot version updates, you'll need to specify which
-# package ecosystems to update and where the package manifests are located.
-# Please see the documentation for all configuration options:
-# https://docs.github.com/github/administering-a-repository/configuration-options-for-dependency-updates
 version: 2
 updates:
-  - package-ecosystem: "maven" # See documentation for possible values
-    directory: "/" # Location of package manifests
-    schedule:
-      interval: "weekly"
-    ignore:
-      - dependency-name: "*"
-        update-types: ["version-update:semver-major"]
+- package-ecosystem: maven
+  directory: "/"
+  schedule:
+    interval: daily
+    time: "13:00"
+    timezone: America/New_York
+  open-pull-requests-limit: 10
+  cooldown:
+    default-days: 7
+    exclude:
+      - "org.jboss.da:*"
+      - "org.jboss.pnc*:*"        # match org.jboss.pnc:xyz and org.jboss.pnc.group:xyz
 
-  - package-ecosystem: "github-actions" # Also update Github actions
-    directory: "/"
-    schedule:
-      # Check for updates to GitHub Actions every week
-      interval: "weekly"
+- package-ecosystem: "github-actions" # Also update Github actions
+  directory: "/"
+  schedule:
+    # Check for updates to GitHub Actions every week
+    interval: "weekly"
+  cooldown:
+    default-days: 7
+
+
+# Check if we're using the latest docker images
+- package-ecosystem: "docker"
+  directory: "/container"
+  schedule:
+    interval: "weekly"
+  cooldown:
+    default-days: 7
