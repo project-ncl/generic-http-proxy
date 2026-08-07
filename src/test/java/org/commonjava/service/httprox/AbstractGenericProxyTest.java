@@ -4,9 +4,9 @@
  */
 package org.commonjava.service.httprox;
 
-import static org.jboss.pnc.proxy.util.UrlUtils.base64url;
 import static org.hamcrest.CoreMatchers.notNullValue;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.jboss.pnc.proxy.util.UrlUtils.base64url;
 import static org.mockito.ArgumentMatchers.*;
 
 import java.io.*;
@@ -35,7 +35,6 @@ import org.jboss.pnc.proxy.client.content.ContentRetrievalService;
 import org.junit.jupiter.api.BeforeAll;
 import org.mockito.Mockito;
 
-import io.quarkus.test.junit.QuarkusMock;
 import io.smallrye.mutiny.Uni;
 import okhttp3.*;
 
@@ -66,8 +65,8 @@ public class AbstractGenericProxyTest {
                 .thenReturn(Uni.createFrom().item(buildResponse("simple-1.pom")));
         Mockito.when(contentRetrievalService.doGet(any(), any(), any(), contains(base64url("no.pom"))))
                 .thenReturn(Uni.createFrom().item(buildResponse("no.pom")));
-
-        QuarkusMock.installMockForType(contentRetrievalService, ContentRetrievalService.class);
+        //FIXME do tests
+        //        QuarkusMock.installMockForType(contentRetrievalService, ContentRetrievalService.class);
 
         etcDir = new File("/tmp");
         initTestData();

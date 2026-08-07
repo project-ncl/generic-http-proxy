@@ -35,7 +35,6 @@ tracking:
 
 ## [rest client]
 repo-service-api/mp-rest/uri: http://localhost:8080
-repo-service-api/mp-rest/scope: javax.inject.Singleton
 
 ## [auth]
 auth:

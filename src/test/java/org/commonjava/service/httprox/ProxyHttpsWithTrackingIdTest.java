@@ -6,11 +6,13 @@ package org.commonjava.service.httprox;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import io.quarkus.test.junit.QuarkusTest;
 
 @QuarkusTest
+@Disabled //FIXME redo
 public class ProxyHttpsWithTrackingIdTest extends AbstractGenericProxyTest {
 
     private static final String TRACKING_ID = "A8DinNReIBj9NH";

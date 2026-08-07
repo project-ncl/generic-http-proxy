@@ -18,11 +18,11 @@
   <groupId>org.jboss.pnc</groupId>
   <artifactId>generic-http-proxy</artifactId>
   <version>1.0.0-SNAPSHOT</version>
-  <inceptionYear>2021</inceptionYear>
 
   <name>PNC :: Generic HTTP Proxy</name>
   <description>PNC Generic HTTP Proxy Service</description>
   <url>https://github.com/project-ncl/generic-http-proxy</url>
+  <inceptionYear>2026</inceptionYear>
 
   <scm>
     <connection>scm:git:https://github.com/project-ncl/generic-http-proxy</connection>
@@ -35,7 +35,7 @@
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
     <maven.compiler.parameters>true</maven.compiler.parameters>
-    <maven.compiler.release>21</maven.compiler.release>
+    <maven.compiler.release>25</maven.compiler.release>
     <jdk.min.version>${maven.compiler.release}</jdk.min.version>
 
     <apiVersion>1</apiVersion>
@@ -43,19 +43,16 @@
 
     <quarkus.platform.artifact-id>quarkus-bom</quarkus.platform.artifact-id>
     <quarkus.platform.group-id>io.quarkus.platform</quarkus.platform.group-id>
-    <quarkus.platform.version>3.6.9</quarkus.platform.version>
+    <quarkus.platform.version>3.38.1</quarkus.platform.version>
 
     <xnioVersion>3.8.17.Final</xnioVersion>
     <httpcoreVersion>4.4.16</httpcoreVersion>
     <httpclientVersion>4.5.14</httpclientVersion>
     <indyModelVersion>2.2</indyModelVersion>
     <quarkus-plugin.version>2.3.0.Final</quarkus-plugin.version>
-    <keycloakVersion>22.0.5</keycloakVersion>
-    <quarkus.package.type>uber-jar</quarkus.package.type>
-    <infinispanVersion>14.0.21.Final</infinispanVersion>
-    
-    <artifactory-client.version>2.13.0</artifactory-client.version>
-    
+
+    <artifactory-client.version>2.21.3-SNAPSHOT</artifactory-client.version>
+
     <jib.base.image.version>1.24-7</jib.base.image.version>
     <jib.base.image.digest>sha256:5ee73448f86838eecff13f80512b49ff6ea0fa21aaf5d1fa8afe3402fc965e9e</jib.base.image.digest>
   </properties>
@@ -86,7 +83,6 @@
     <dependency>
       <groupId>com.squareup.okhttp3</groupId>
       <artifactId>okhttp</artifactId>
-      <version>4.12.0</version>
     </dependency>
     <dependency>
       <groupId>com.squareup.okio</groupId>
@@ -103,11 +99,15 @@
     </dependency>
     <dependency>
       <groupId>io.quarkus</groupId>
-      <artifactId>quarkus-resteasy-jackson</artifactId>
+      <artifactId>quarkus-jackson</artifactId>
     </dependency>
     <dependency>
       <groupId>io.quarkus</groupId>
       <artifactId>quarkus-smallrye-health</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>io.quarkus</groupId>
+      <artifactId>quarkus-container-image-jib</artifactId>
     </dependency>
     <dependency>
       <groupId>io.quarkus</groupId>
@@ -144,39 +144,36 @@
     </dependency>
     <dependency>
       <groupId>io.quarkus</groupId>
-      <artifactId>quarkus-rest-client-mutiny</artifactId>
+      <artifactId>quarkus-vertx</artifactId>
     </dependency>
     <dependency>
       <groupId>io.quarkus</groupId>
-      <artifactId>quarkus-vertx</artifactId>
+      <artifactId>quarkus-opentelemetry</artifactId>
     </dependency>
     <dependency>
       <groupId>org.commonjava.indy.service</groupId>
       <artifactId>indy-model-core-java</artifactId>
       <version>${indyModelVersion}</version>
+      <!-- Can interfere with quarkus-logging-kafka -->
+      <exclusions>
+        <exclusion>
+          <groupId>ch.qos.logback</groupId>
+          <artifactId>logback-classic</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
-    <!-- Artifactory Java Client -->
     <dependency>
-      <groupId>org.jfrog.artifactory.client</groupId>
+      <groupId>org.jboss.pnc.artifactory-client</groupId>
       <artifactId>artifactory-java-client-services</artifactId>
       <version>${artifactory-client.version}</version>
-    </dependency>
-    <dependency>
-      <groupId>org.jfrog.artifactory.client</groupId>
-      <artifactId>artifactory-java-client-api</artifactId>
-      <version>${artifactory-client.version}</version>
-    </dependency>
-    <dependency>
-      <groupId>org.keycloak</groupId>
-      <artifactId>keycloak-core</artifactId>
-      <version>${keycloakVersion}</version>
+      <exclusions>
+        <exclusion>
+          <groupId>org.slf4j</groupId>
+          <artifactId>log4j-over-slf4j</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
 
-    <dependency>
-      <groupId>org.keycloak</groupId>
-      <artifactId>keycloak-adapter-core</artifactId>
-      <version>${keycloakVersion}</version>
-    </dependency>
     <dependency>
       <groupId>io.opentelemetry</groupId>
       <artifactId>opentelemetry-sdk</artifactId>
@@ -185,8 +182,9 @@
       <groupId>io.micrometer</groupId>
       <artifactId>micrometer-registry-prometheus</artifactId>
     </dependency>
+
     <dependency>
-      <groupId>io.opentelemetry</groupId>
+      <groupId>io.opentelemetry.semconv</groupId>
       <artifactId>opentelemetry-semconv</artifactId>
     </dependency>
 
@@ -200,16 +198,16 @@
       <groupId>io.quarkus</groupId>
       <artifactId>quarkus-oidc-client</artifactId>
     </dependency>
+
     <dependency>
       <groupId>io.quarkus</groupId>
-      <artifactId>quarkus-oidc-client-filter</artifactId>
+      <artifactId>quarkus-rest-client-oidc-filter</artifactId>
     </dependency>
 
     <dependency>
       <groupId>io.quarkus</groupId>
       <artifactId>quarkus-smallrye-fault-tolerance</artifactId>
     </dependency>
-
     <dependency>
       <groupId>io.quarkus</groupId>
       <artifactId>quarkus-caffeine</artifactId>
@@ -223,7 +221,23 @@
       <groupId>commons-io</groupId>
       <artifactId>commons-io</artifactId>
     </dependency>
+    <dependency>
+      <groupId>org.bouncycastle</groupId>
+      <artifactId>bcpkix-jdk18on</artifactId>
+    </dependency>
   </dependencies>
+
+  <repositories>
+    <repository>
+      <releases>
+        <enabled>false</enabled>
+      </releases>
+      <snapshots/>
+      <id>central-portal-snapshots</id>
+      <name>Central Portal Snapshots</name>
+      <url>https://central.sonatype.com/repository/maven-snapshots/</url>
+    </repository>
+  </repositories>
 
   <build>
     <resources>
@@ -236,6 +250,26 @@
       <plugin>
         <groupId>io.quarkus.platform</groupId>
         <artifactId>quarkus-maven-plugin</artifactId>
+        <version>${quarkus.platform.version}</version>
+        <extensions>true</extensions>
+        <executions>
+          <execution>
+            <goals>
+              <goal>build</goal>
+              <goal>generate-code</goal>
+              <goal>generate-code-tests</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <artifactId>maven-surefire-plugin</artifactId>
+        <configuration>
+          <systemPropertyVariables>
+            <java.util.logging.manager>org.jboss.logmanager.LogManager</java.util.logging.manager>
+            <maven.home>${maven.home}</maven.home>
+          </systemPropertyVariables>
+        </configuration>
       </plugin>
       <plugin>
         <groupId>ru.concerteza.buildnumber</groupId>

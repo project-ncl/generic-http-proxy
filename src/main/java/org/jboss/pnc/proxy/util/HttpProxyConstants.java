@@ -13,6 +13,8 @@ import java.util.Set;
 import org.apache.commons.lang3.StringUtils;
 
 public final class HttpProxyConstants {
+    public static final String TRACKING_ID = "tracking-id";
+
     public static final String PROXY_METRIC_LOGGER = "org.commonjava.topic.httprox.inbound";
 
     public static final String PROXY_REPO_PREFIX = "httprox_";

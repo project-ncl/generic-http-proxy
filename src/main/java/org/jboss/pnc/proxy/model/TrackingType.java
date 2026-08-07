@@ -6,6 +6,6 @@ package org.jboss.pnc.proxy.model;
 
 public enum TrackingType {
 
-    SUFFIX, ALWAYS, NEVER;
+    SUFFIX, ALWAYS, STATIC, NEVER;
 
 }

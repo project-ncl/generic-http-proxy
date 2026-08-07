@@ -11,8 +11,8 @@ import org.commonjava.indy.model.core.*;
 import org.commonjava.indy.model.core.dto.StoreListingDTO;
 import org.commonjava.indy.model.core.io.IndyObjectMapper;
 import org.commonjava.indy.pkg.PackageTypeConstants;
-import org.jboss.pnc.proxy.client.repository.RepositoryService;
 import org.eclipse.microprofile.rest.client.inject.RestClient;
+import org.jboss.pnc.proxy.client.repository.RepositoryService;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 

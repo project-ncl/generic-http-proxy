@@ -17,8 +17,8 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 
 import org.apache.commons.io.FilenameUtils;
-import org.jboss.pnc.proxy.config.ServiceConfig;
 import org.jboss.pnc.proxy.config.ServiceProxyConfig;
+import org.jboss.pnc.proxy.config.ServiceProxyConfig.ServiceConfig;
 import org.jboss.pnc.proxy.util.OtelAdapter;
 import org.jboss.pnc.proxy.util.WebClientAdapter;
 import org.slf4j.Logger;
@@ -73,8 +73,8 @@ public class Classifier {
         if (otel.enabled()) {
             Span span = Span.current();
             Span.current().setAttribute("serviced", 1);
-            span.setAttribute("target.host", service.host);
-            span.setAttribute("target.port", service.port);
+            span.setAttribute("target.host", service.host());
+            span.setAttribute("target.port", service.port());
             span.setAttribute("target.method", method.name());
             span.setAttribute("target.path", path);
         }
@@ -84,10 +84,11 @@ public class Classifier {
     private ServiceConfig getServiceConfig(String path, HttpMethod method) {
         ServiceConfig service = null;
 
-        Set<ServiceConfig> services = proxyConfiguration.getServices();
+        Set<ServiceConfig> services = proxyConfiguration.services();
         if (services != null) {
             for (ServiceConfig sv : services) {
-                if (path.matches(sv.pathPattern) && (sv.methods == null || sv.methods.contains(method.name()))) {
+                if (path.matches(sv.pathPattern())
+                        && (sv.methods().isPresent() || sv.methods().get().contains(method.name()))) {
                     service = sv;
                     break;
                 }

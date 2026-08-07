@@ -38,3 +38,6 @@ nb-configuration.xml
 
 # Local environment
 .env
+.bob
+.bobignore
+application-local.yaml

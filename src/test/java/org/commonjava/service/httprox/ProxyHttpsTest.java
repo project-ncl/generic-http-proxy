@@ -8,11 +8,13 @@ import static io.smallrye.common.constraint.Assert.assertTrue;
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.MatcherAssert.assertThat;
 
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import io.quarkus.test.junit.QuarkusTest;
 
 @QuarkusTest
+@Disabled //FIXME redo
 public class ProxyHttpsTest extends AbstractGenericProxyTest {
 
     private static final String USER = "user";

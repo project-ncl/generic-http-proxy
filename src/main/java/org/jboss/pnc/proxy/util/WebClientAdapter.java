@@ -12,19 +12,21 @@ import java.net.URL;
 import java.nio.file.Files;
 import java.time.Duration;
 import java.util.Arrays;
+import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.commons.io.IOUtils;
-import org.jboss.pnc.proxy.config.ServiceConfig;
 import org.jboss.pnc.proxy.config.ServiceProxyConfig;
+import org.jboss.pnc.proxy.config.ServiceProxyConfig.ServiceConfig;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import io.opentelemetry.api.trace.Span;
 import io.opentelemetry.context.Scope;
-import io.opentelemetry.semconv.trace.attributes.SemanticAttributes;
+import io.opentelemetry.semconv.HttpAttributes;
+import io.opentelemetry.semconv.UrlAttributes;
 import io.smallrye.mutiny.Uni;
 import io.smallrye.mutiny.vertx.UniHelper;
 import io.vertx.core.Future;
@@ -75,10 +77,16 @@ public class WebClientAdapter {
     }
 
     public RequestAdapter head(String path, HttpServerRequest req) {
+        if (req == null) {
+            return head(path);
+        }
         return new RequestAdapter(new Request.Builder().head().url(calculateUrl(path)), path).headersFrom(req);
     }
 
     public RequestAdapter get(String path, HttpServerRequest req) {
+        if (req == null) {
+            return get(path);
+        }
         return new RequestAdapter(new Request.Builder().get().url(calculateUrl(path)), path).headersFrom(req);
     }
 
@@ -135,12 +143,12 @@ public class WebClientAdapter {
 
     private String calculateUrl(String path) {
         StringBuilder sb = new StringBuilder("http");
-        if (serviceConfig.ssl) {
+        if (serviceConfig.ssl()) {
             sb.append('s');
         }
-        sb.append("://").append(serviceConfig.host);
-        if (serviceConfig.port > 0) {
-            sb.append(':').append(serviceConfig.port);
+        sb.append("://").append(serviceConfig.host());
+        if (serviceConfig.port() > 0) {
+            sb.append(':').append(serviceConfig.port());
         }
 
         if (!path.startsWith("/")) {
@@ -154,9 +162,9 @@ public class WebClientAdapter {
 
     public void reinit() {
         logger.info("reinit, timeout: {}", timeout.get());
-        logger.info("reinit, retry: {}", proxyConfiguration.getRetry());
+        logger.info("reinit, retry: {}", proxyConfiguration.retry());
         Duration d = Duration.ofMillis(timeout.get());
-        this.client = new OkHttpClient.Builder().addInterceptor(new RetryInterceptor(proxyConfiguration.getRetry()))
+        this.client = new OkHttpClient.Builder().addInterceptor(new RetryInterceptor(proxyConfiguration.retry()))
                 .callTimeout(d)
                 .readTimeout(d)
                 .writeTimeout(d)
@@ -219,8 +227,8 @@ public class WebClientAdapter {
                 return new CallAdapter(exception);
             }
 
-            logger.info("read timeout: {}", proxyConfiguration.getReadTimeout());
-            Duration pathTimeout = Duration.parse("pt" + proxyConfiguration.getReadTimeout());
+            logger.info("read timeout: {}", proxyConfiguration.readTimeout());
+            Duration pathTimeout = Duration.parse("pt" + proxyConfiguration.readTimeout());
             if (otel.enabled()) {
                 Span.current()
                         .setAttribute("target.timeout", pathTimeout != null ? pathTimeout.toMillis() : timeout.get());
@@ -244,6 +252,18 @@ public class WebClientAdapter {
             }
 
             return new CallAdapter(callClient, requestBuilder, serviceConfig);
+        }
+
+        public RequestAdapter addHeader(String name, String value) {
+            if (exception != null) {
+                return this;
+            }
+
+            if (name != null && value != null) {
+                requestBuilder.header(name, value);
+            }
+
+            return this;
         }
 
         public RequestAdapter withCleanup(Interceptor cleanupInterceptor) {
@@ -283,8 +303,8 @@ public class WebClientAdapter {
                 if (otel.enabled()) {
                     span = otel.newClientSpan(
                             "okhttp",
-                            requestBuilder.build().method() + ":" + serviceConfig.host + ":"
-                                    + serviceConfig.port);
+                            requestBuilder.build().method() + ":" + serviceConfig.host() + ":"
+                                    + serviceConfig.port());
 
                     scope = span.makeCurrent();
 
@@ -303,9 +323,9 @@ public class WebClientAdapter {
                 logger.info("Starting upstream request: {} ({})", url, timestamp);
 
                 if (span != null) {
-                    span.setAttribute(SemanticAttributes.HTTP_METHOD, call.request().method());
-                    span.setAttribute(SemanticAttributes.HTTP_HOST, call.request().url().host());
-                    span.setAttribute(SemanticAttributes.HTTP_URL, call.request().url().url().toExternalForm());
+                    span.setAttribute(HttpAttributes.HTTP_REQUEST_METHOD, call.request().method());
+                    // span.setAttribute(HttpAttributes.HTTP_HOST, call.request().url().host());
+                    span.setAttribute(UrlAttributes.URL_FULL, call.request().url().url().toExternalForm());
                 }
 
                 call.enqueue(new Callback() {
@@ -332,10 +352,13 @@ public class WebClientAdapter {
                     @Override
                     public void onResponse(@NotNull Call call, @NotNull Response response) {
                         if (span != null) {
-                            span.setAttribute(SemanticAttributes.HTTP_STATUS_CODE, response.code());
-                            span.setAttribute(
-                                    SemanticAttributes.HTTP_RESPONSE_CONTENT_LENGTH.getKey(),
-                                    response.header("Content-Length"));
+                            span.setAttribute(HttpAttributes.HTTP_RESPONSE_STATUS_CODE, response.code());
+                            String contentLength = response.header("Content-Length");
+                            if (contentLength != null) {
+                                span.setAttribute(
+                                        HttpAttributes.HTTP_RESPONSE_HEADER.getAttributeKey("Content-Length"),
+                                        List.of(contentLength));
+                            }
 
                             // NOTE: Because we're doing this using a Future, we can't use try-with-resources/finally, as
                             // the OTEL example shows.
@@ -363,8 +386,8 @@ public class WebClientAdapter {
         private final long interval;
 
         RetryInterceptor(ServiceProxyConfig.Retry retry) {
-            this.count = retry == null || retry.count < 0 ? DEFAULT_RETRY_COUNT : retry.count;
-            this.interval = retry == null || retry.interval < 0 ? DEFAULT_BACKOFF_MILLIS : retry.interval;
+            this.count = retry == null || retry.count() < 0 ? DEFAULT_RETRY_COUNT : retry.count();
+            this.interval = retry == null || retry.interval() < 0 ? DEFAULT_BACKOFF_MILLIS : retry.interval();
         }
 
         @NotNull

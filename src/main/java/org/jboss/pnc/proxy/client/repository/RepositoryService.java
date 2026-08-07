@@ -7,10 +7,10 @@ package org.jboss.pnc.proxy.client.repository;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.Response;
 
-import org.jboss.pnc.proxy.util.CustomClientRequestFilter;
 import org.eclipse.microprofile.faulttolerance.Retry;
 import org.eclipse.microprofile.rest.client.annotation.RegisterProvider;
 import org.eclipse.microprofile.rest.client.inject.RegisterRestClient;
+import org.jboss.pnc.proxy.util.CustomClientRequestFilter;
 
 @Path("/api/admin/stores")
 @RegisterRestClient(configKey = "repo-service-api")

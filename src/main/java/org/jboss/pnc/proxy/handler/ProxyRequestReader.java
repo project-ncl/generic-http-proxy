@@ -101,7 +101,7 @@ public final class ProxyRequestReader
                     sendResponse = false;
                     sourceChannel.shutdownReads();
                 } catch (HttpException e) {
-                    logger.error("Failed to parse http request: " + e.getMessage(), e);
+                    logger.error("Failed to parse http request: {}", e.getMessage(), e);
                     writer.setError(e);
                 }
             } else {
@@ -127,7 +127,7 @@ public final class ProxyRequestReader
 
         int total = 0;
         while (true) {
-            ByteBuffer buf = ByteBuffer.allocate(1024);
+            ByteBuffer buf = ByteBuffer.allocate(32768);
             channel.awaitReadable(AWAIT_READABLE_IN_MILLISECONDS, TimeUnit.MILLISECONDS);
 
             int read = channel.read(buf); // return the number of bytes read, possibly zero, or -1
@@ -159,26 +159,23 @@ public final class ProxyRequestReader
                 // allows us to stop after header read...
                 final String part = new String(bbuf);
                 for (final char c : part.toCharArray()) {
+                    pReq.print(c);
                     switch (c) {
-                        case '\n': {
+                        case '\n' -> {
                             while (lastFour.size() > 3) {
-                                lastFour.remove(0);
+                                lastFour.removeFirst();
                             }
 
                             lastFour.add(c);
-                            try {
-                                if (bReq.size() > 0 && HEAD_END.equals(lastFour)) {
-                                    logger.debug("Detected end of request headers.");
-                                    headDone = true;
 
-                                    logger.trace("Proxy request header:\n{}\n", new String(bReq.toByteArray()));
-                                }
-                            } finally {
-                                lastFour.remove(lastFour.size() - 1);
+                            if (bReq.size() > 0 && HEAD_END.equals(lastFour)) {
+                                logger.debug("Detected end of request headers.");
+                                headDone = true;
+
+                                logger.trace("Proxy request header:\n{}\n", new String(bReq.toByteArray()));
                             }
                         }
-                        default: {
-                            pReq.print(c);
+                        default -> {
                             lastFour.add(c);
                         }
                     }

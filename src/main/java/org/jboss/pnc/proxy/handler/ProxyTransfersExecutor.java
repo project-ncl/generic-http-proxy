@@ -9,8 +9,8 @@ import jakarta.inject.Inject;
 import jakarta.inject.Named;
 import jakarta.ws.rs.Produces;
 
-import org.jboss.pnc.proxy.config.ProxyConfiguration;
 import org.eclipse.microprofile.context.ManagedExecutor;
+import org.jboss.pnc.proxy.config.ProxyConfiguration;
 
 public class ProxyTransfersExecutor {
 

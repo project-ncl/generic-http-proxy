@@ -33,6 +33,8 @@ public class HttpProxy {
     @Inject
     ProxyAcceptHandler acceptHandler;
 
+    private XnioWorker worker;
+
     private AcceptingChannel<StreamConnection> server;
 
     protected HttpProxy() {
@@ -48,7 +50,6 @@ public class HttpProxy {
 
         logger.info("Starting HTTProx proxy on: {}:{}", bind, config.getPort());
 
-        XnioWorker worker;
         try {
             worker = Xnio.getInstance()
                     .createWorker(
@@ -98,7 +99,13 @@ public class HttpProxy {
                 server.suspendAccepts();
                 server.close();
             } catch (final IOException e) {
-                logger.error("Failed to stop: " + e.getMessage(), e);
+                logger.error("Failed to stop: {}", e.getMessage(), e);
+            } finally {
+                try {
+                    worker.close();
+                } catch (Exception e) {
+                    logger.error("Failed to stop: {}", e.getMessage(), e);
+                }
             }
         }
     }
