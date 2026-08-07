@@ -13,6 +13,7 @@ jobs:
       with:
         project_name: 'project-ncl/generic-http-proxy'
         quarkus_jib_image: true
+        java_version: '25'
       secrets:
         SONATYPE_USERNAME: ${{ secrets.SONATYPE_USERNAME }}
         SONATYPE_PASSWORD: ${{ secrets.SONATYPE_PASSWORD }}
