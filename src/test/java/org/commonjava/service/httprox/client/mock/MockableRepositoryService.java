@@ -22,9 +22,9 @@ import org.commonjava.indy.model.core.StoreKey;
 import org.commonjava.indy.model.core.StoreType;
 import org.commonjava.indy.model.core.dto.StoreListingDTO;
 import org.commonjava.indy.model.core.io.IndyObjectMapper;
+import org.eclipse.microprofile.rest.client.inject.RestClient;
 import org.jboss.pnc.proxy.client.repository.RepositoryService;
 import org.jboss.pnc.proxy.util.UrlInfo;
-import org.eclipse.microprofile.rest.client.inject.RestClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

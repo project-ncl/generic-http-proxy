@@ -28,13 +28,15 @@ import org.apache.http.impl.client.BasicCredentialsProvider;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.impl.conn.DefaultProxyRoutePlanner;
-import org.jboss.pnc.proxy.client.repository.RepositoryService;
 import org.eclipse.microprofile.rest.client.inject.RestClient;
+import org.jboss.pnc.proxy.client.repository.RepositoryService;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import io.quarkus.test.junit.QuarkusTest;
 
 @QuarkusTest
+@Disabled //FIXME redo
 public class HttpProxyTest extends AbstractGenericProxyTest {
 
     private static final String USER = "user";

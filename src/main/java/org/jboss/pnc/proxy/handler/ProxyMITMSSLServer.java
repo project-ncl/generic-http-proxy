@@ -27,8 +27,8 @@ import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLServerSocketFactory;
 
-import org.commonjava.indy.model.core.ArtifactStore;
 import org.jboss.pnc.proxy.config.ProxyConfiguration;
+import org.jboss.pnc.proxy.model.RemoteRepository;
 import org.jboss.pnc.proxy.util.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -56,7 +56,7 @@ public class ProxyMITMSSLServer implements Runnable {
 
     private final UserPass proxyUserPass;
 
-    private final ProxyResponseHelper proxyResponseHelper;
+    private final ArtifactoryProxyResponseHelper proxyResponseHelper;
 
     private volatile boolean isCancelled = false;
 
@@ -73,7 +73,7 @@ public class ProxyMITMSSLServer implements Runnable {
             int port,
             String trackingId,
             UserPass proxyUserPass,
-            ProxyResponseHelper proxyResponseHelper,
+            ArtifactoryProxyResponseHelper proxyResponseHelper,
             ProxyConfiguration config,
             ProxyMeter meter,
             HttpConduitWrapper httpConduitWrapper) {
@@ -281,12 +281,12 @@ public class ProxyMITMSSLServer implements Runnable {
         URL remoteUrl = new URL(protocol, host, port, file);
         logger.debug("Requesting remote URL: {}", remoteUrl);
 
-        ArtifactStore store = proxyResponseHelper.getArtifactStore(trackingId, remoteUrl);
+        RemoteRepository repo = proxyResponseHelper.getRepository(trackingId, remoteUrl, proxyUserPass);
         try (BufferedOutputStream out = new BufferedOutputStream(socket.getOutputStream());
                 HttpConduitWrapper http = new HttpConduitWrapper(new OutputStreamSinkChannel(out), null)) {
             proxyResponseHelper.transfer(
                     http,
-                    store,
+                    repo,
                     remoteUrl.getFile(),
                     GET_METHOD.equals(method),
                     proxyUserPass,

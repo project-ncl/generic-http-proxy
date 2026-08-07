@@ -8,30 +8,34 @@ import java.io.NotSerializableException;
 import java.io.Serializable;
 import java.text.MessageFormat;
 
-public class IndyProxyException extends Exception {
+public class GenericProxyException extends Exception {
     private static final long serialVersionUID = 1L;
 
     private Object[] params;
 
     private int status;
 
-    public IndyProxyException(final String message, final Throwable cause, final Object... params) {
+    public GenericProxyException(final String message, final Throwable cause, final Object... params) {
         super(message, cause);
         this.params = params;
     }
 
-    public IndyProxyException(final String message, final Object... params) {
+    public GenericProxyException(final String message, final Object... params) {
         super(message);
         this.params = params;
     }
 
-    public IndyProxyException(final int status, final String message, final Throwable cause, final Object... params) {
+    public GenericProxyException(
+            final int status,
+            final String message,
+            final Throwable cause,
+            final Object... params) {
         super(message, cause);
         this.params = params;
         this.status = status;
     }
 
-    public IndyProxyException(final int status, final String message, final Object... params) {
+    public GenericProxyException(final int status, final String message, final Object... params) {
         super(message);
         this.params = params;
         this.status = status;

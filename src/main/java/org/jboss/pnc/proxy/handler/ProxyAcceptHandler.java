@@ -9,21 +9,14 @@ import static org.jboss.pnc.proxy.util.MetricsConstants.*;
 
 import java.io.IOException;
 
-import jakarta.annotation.PostConstruct;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.inject.Named;
 
-import org.commonjava.indy.model.core.io.IndyObjectMapper;
-import org.jboss.pnc.proxy.client.content.ContentRetrievalService;
-import org.jboss.pnc.proxy.client.repository.RepositoryService;
-import org.jboss.pnc.proxy.config.ProxyConfiguration;
-import org.jboss.pnc.proxy.keycloak.KeycloakProxyAuthenticator;
-import org.jboss.pnc.proxy.util.CacheProducer;
-import org.jboss.pnc.proxy.util.OtelAdapter;
-import org.jboss.pnc.proxy.util.RepoCreator;
 import org.eclipse.microprofile.context.ManagedExecutor;
-import org.eclipse.microprofile.rest.client.inject.RestClient;
+import org.jboss.pnc.proxy.client.repository.ArtifactoryRepositoryManager;
+import org.jboss.pnc.proxy.config.ProxyConfiguration;
+import org.jboss.pnc.proxy.util.OtelAdapter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.xnio.ChannelListener;
@@ -43,16 +36,6 @@ public class ProxyAcceptHandler implements ChannelListener<AcceptingChannel<Stre
     ProxyConfiguration config;
 
     @Inject
-    @RestClient
-    RepositoryService repositoryService;
-
-    @Inject
-    ContentRetrievalService contentRetrievalService;
-
-    @Inject
-    KeycloakProxyAuthenticator proxyAuthenticator;
-
-    @Inject
     @Named("mitm-transfers")
     ManagedExecutor proxyExecutor;
 
@@ -60,18 +43,7 @@ public class ProxyAcceptHandler implements ChannelListener<AcceptingChannel<Stre
     OtelAdapter otel;
 
     @Inject
-    CacheProducer cacheProducer;
-
-    IndyObjectMapper objectMapper;
-
-    public ProxyAcceptHandler() {
-
-    }
-
-    @PostConstruct
-    public void post() {
-        objectMapper = new IndyObjectMapper(false);
-    }
+    ArtifactoryRepositoryManager repositoryManager;
 
     @Override
     public void handleEvent(AcceptingChannel<StreamConnection> channel) {
@@ -86,7 +58,7 @@ public class ProxyAcceptHandler implements ChannelListener<AcceptingChannel<Stre
         try {
             accepted = channel.accept();
         } catch (IOException e) {
-            logger.error("Failed to accept httprox connection: " + e.getMessage(), e);
+            logger.error("Failed to accept httprox connection: {}", e.getMessage(), e);
             accepted = null;
         }
 
@@ -103,19 +75,11 @@ public class ProxyAcceptHandler implements ChannelListener<AcceptingChannel<Stre
 
         final ConduitStreamSourceChannel source = accepted.getSourceChannel();
         final ConduitStreamSinkChannel sink = accepted.getSinkChannel();
-
-        ProxyRepositoryCreator repoCreator = new RepoCreator(config);
-
         final ProxyResponseWriter writer = new ProxyResponseWriter(
                 config,
-                repoCreator,
                 accepted,
-                repositoryService,
-                contentRetrievalService,
+                repositoryManager,
                 proxyExecutor,
-                proxyAuthenticator,
-                objectMapper,
-                cacheProducer,
                 start,
                 otel);
 

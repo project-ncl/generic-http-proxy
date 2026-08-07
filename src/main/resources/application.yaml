@@ -5,7 +5,7 @@ quarkus:
   log:
     level: INFO
     category:
-      "org.commonjava.indy.service.httprox":
+      "org.jboss.pnc.proxy":
         level: DEBUG
       "org.commonjava.indy.model":
         level: ERROR
@@ -76,9 +76,19 @@ storage:
   path:
     style: hashed
 
-## [rest client]
+## [Artifactory]
+artifactory:
+  url: ${ARTIFACTORY_URL:http://localhost:8081/artifactory}
+  access-token: ${ARTIFACTORY_ACCESS_TOKEN:abcd}
+  connection-timeout: 30
+  socket-timeout: 60
+  project-key: ${PROJECT_KEY:NCL}
+  # Static tracking credentials (used when tracking.type=STATIC)
+  static-tracking-user: ${ARTIFACTORY_STATIC_USER:}
+  static-tracking-password: ${ARTIFACTORY_STATIC_PASSWORD:}
+
+## [rest client - legacy Indy, to be removed]
 repo-service-api/mp-rest/uri: http://localhost:8080
-repo-service-api/mp-rest/scope: javax.inject.Singleton
 
 ## [auth]
 auth:

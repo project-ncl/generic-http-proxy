@@ -9,8 +9,8 @@ import java.util.Optional;
 import jakarta.enterprise.context.ApplicationScoped;
 
 import org.commonjava.indy.model.core.PathStyle;
-import org.jboss.pnc.proxy.model.TrackingType;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
+import org.jboss.pnc.proxy.model.TrackingType;
 
 import io.quarkus.runtime.Startup;
 

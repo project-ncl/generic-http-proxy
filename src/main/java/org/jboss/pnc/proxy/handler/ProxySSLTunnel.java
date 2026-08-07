@@ -58,7 +58,7 @@ public class ProxySSLTunnel implements Runnable {
     private void pipeTargetToSinkChannel(ConduitStreamSinkChannel sinkChannel, SocketChannel targetChannel)
             throws IOException {
         targetChannel.socket().setSoTimeout((int) TimeUnit.MINUTES.toMillis(config.getMITMSoTimeoutMinutes()));
-        InputStream inStream = new BufferedInputStream(targetChannel.socket().getInputStream());
+        InputStream inStream = new BufferedInputStream(targetChannel.socket().getInputStream(), DEFAULT_READ_BUF_SIZE);
         ReadableByteChannel wrappedChannel = Channels.newChannel(inStream);
 
         ByteBuffer byteBuffer = ByteBuffer.allocate(DEFAULT_READ_BUF_SIZE);
@@ -89,7 +89,7 @@ public class ProxySSLTunnel implements Runnable {
             //final byte[] bytes = new byte[byteBuffer.limit()];
             //byteBuffer.get( bytes );
 
-            logger.debug("Write to sink channel, size: {}", byteBuffer.limit());
+            logger.trace("Write to sink channel, size: {}", byteBuffer.limit());
             try {
                 ChannelUtils.write(sinkChannel, byteBuffer);
             } catch (IOException e) {

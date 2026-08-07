@@ -7,10 +7,15 @@ package org.jboss.pnc.proxy.handler;
 import static java.lang.Integer.parseInt;
 import static org.apache.commons.codec.digest.DigestUtils.sha256Hex;
 import static org.apache.commons.io.IOUtils.closeQuietly;
-import static org.commonjava.indy.model.core.ArtifactStore.TRACKING_ID;
 import static org.jboss.pnc.proxy.util.ApplicationHeader.proxy_authenticate;
 import static org.jboss.pnc.proxy.util.ApplicationStatus.PROXY_AUTHENTICATION_REQUIRED;
-import static org.jboss.pnc.proxy.util.HttpProxyConstants.*;
+import static org.jboss.pnc.proxy.util.HttpProxyConstants.ALLOW_HEADER_VALUE;
+import static org.jboss.pnc.proxy.util.HttpProxyConstants.CONNECT_METHOD;
+import static org.jboss.pnc.proxy.util.HttpProxyConstants.GET_METHOD;
+import static org.jboss.pnc.proxy.util.HttpProxyConstants.HEAD_METHOD;
+import static org.jboss.pnc.proxy.util.HttpProxyConstants.OPTIONS_METHOD;
+import static org.jboss.pnc.proxy.util.HttpProxyConstants.PROXY_AUTHENTICATE_FORMAT;
+import static org.jboss.pnc.proxy.util.HttpProxyConstants.TRACKING_ID;
 import static org.jboss.pnc.proxy.util.UserPass.parse;
 
 import java.io.IOException;
@@ -20,16 +25,19 @@ import java.nio.channels.SocketChannel;
 
 import org.apache.http.HttpRequest;
 import org.apache.http.RequestLine;
-import org.commonjava.indy.model.core.ArtifactStore;
-import org.commonjava.indy.model.core.io.IndyObjectMapper;
-import org.jboss.pnc.proxy.client.content.ContentRetrievalService;
-import org.jboss.pnc.proxy.client.repository.RepositoryService;
-import org.jboss.pnc.proxy.config.ProxyConfiguration;
-import org.jboss.pnc.proxy.keycloak.KeycloakProxyAuthenticator;
-import org.jboss.pnc.proxy.model.TrackingKey;
-import org.jboss.pnc.proxy.model.TrackingType;
-import org.jboss.pnc.proxy.util.*;
 import org.eclipse.microprofile.context.ManagedExecutor;
+import org.jboss.pnc.proxy.client.repository.ArtifactoryRepositoryManager;
+import org.jboss.pnc.proxy.config.ProxyConfiguration;
+import org.jboss.pnc.proxy.model.RemoteRepository;
+import org.jboss.pnc.proxy.model.TrackingType;
+import org.jboss.pnc.proxy.util.ApplicationHeader;
+import org.jboss.pnc.proxy.util.ApplicationStatus;
+import org.jboss.pnc.proxy.util.ArtifactoryProxyResponseHelper;
+import org.jboss.pnc.proxy.util.HttpConduitWrapper;
+import org.jboss.pnc.proxy.util.HttpWrapper;
+import org.jboss.pnc.proxy.util.OtelAdapter;
+import org.jboss.pnc.proxy.util.ProxyMeter;
+import org.jboss.pnc.proxy.util.UserPass;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.xnio.ChannelListener;
@@ -46,14 +54,12 @@ public final class ProxyResponseWriter
 
     private Throwable error;
     private HttpRequest httpRequest;
-    private ProxyConfiguration config;
-    private ProxyRepositoryCreator repoCreator;
+    private final ProxyConfiguration config;
 
-    private ConduitStreamSourceChannel sourceChannel;
-    private SocketAddress peerAddress;
+    private final ConduitStreamSourceChannel sourceChannel;
+    private final SocketAddress peerAddress;
 
-    private RepositoryService repositoryService;
-    private ContentRetrievalService contentRetrievalService;
+    private final ArtifactoryRepositoryManager repositoryManager;
 
     private ProxySSLTunnel sslTunnel;
     private boolean directed = false;
@@ -61,39 +67,23 @@ public final class ProxyResponseWriter
     private ProxyRequestReader proxyRequestReader;
     private final ManagedExecutor tunnelAndMITMExecutor;
 
-    private KeycloakProxyAuthenticator proxyAuthenticator;
+    private final OtelAdapter otel;
 
-    private IndyObjectMapper indyObjectMapper;
-
-    private CacheProducer cacheProducer;
-
-    private OtelAdapter otel;
-
-    private long startNanos;
+    private final long startNanos;
 
     public ProxyResponseWriter(
             final ProxyConfiguration config,
-            final ProxyRepositoryCreator repoCreator,
             final StreamConnection accepted,
-            final RepositoryService repositoryService,
-            final ContentRetrievalService contentRetrievalService,
+            final ArtifactoryRepositoryManager repositoryManager,
             final ManagedExecutor executor,
-            final KeycloakProxyAuthenticator proxyAuthenticator,
-            final IndyObjectMapper indyObjectMapper,
-            final CacheProducer cacheProducer,
             final long start,
             final OtelAdapter otel) {
         this.config = config;
-        this.repoCreator = repoCreator;
         this.peerAddress = accepted.getPeerAddress();
         this.sourceChannel = accepted.getSourceChannel();
-        this.repositoryService = repositoryService;
-        this.contentRetrievalService = contentRetrievalService;
+        this.repositoryManager = repositoryManager;
         this.tunnelAndMITMExecutor = executor;
-        this.proxyAuthenticator = proxyAuthenticator;
-        this.indyObjectMapper = indyObjectMapper;
         this.startNanos = start;
-        this.cacheProducer = cacheProducer;
         this.otel = otel;
     }
 
@@ -125,7 +115,7 @@ public final class ProxyResponseWriter
         HttpConduitWrapper http = new HttpConduitWrapper(sinkChannel, httpRequest);
         if (httpRequest == null) {
             if (error != null) {
-                logger.debug("Handling error from request reader: " + error.getMessage(), error);
+                logger.debug("Handling error from request reader: {}", error.getMessage(), error);
                 handleError(error, http);
             } else {
                 handleBadRequest(http);
@@ -136,9 +126,12 @@ public final class ProxyResponseWriter
         }
 
         final String oldThreadName = Thread.currentThread().getName();
+        // FIXME make this ThreadLocal
         Thread.currentThread().setName("PROXY-" + httpRequest.getRequestLine().toString());
         sinkChannel.getCloseSetter().set((c) -> {
             logger.trace("Sink channel closing...");
+            // FIXME I very much doubt that this is actually guaranteeing that the calling thread of this lambda is the
+            //  same as the one that was named `oldThreadName`
             Thread.currentThread().setName(oldThreadName); // restore original thread name
             if (sslTunnel != null) {
                 logger.trace("Close ssl tunnel");
@@ -154,14 +147,9 @@ public final class ProxyResponseWriter
         logger.debug("\n\n\n>>>>>>> Handle write\n\n\n");
         if (error == null) {
 
-            ProxyResponseHelper proxyResponseHelper = new ProxyResponseHelper(
+            ArtifactoryProxyResponseHelper proxyResponseHelper = new ArtifactoryProxyResponseHelper(
                     httpRequest,
-                    config,
-                    repoCreator,
-                    repositoryService,
-                    contentRetrievalService,
-                    indyObjectMapper,
-                    cacheProducer,
+                    repositoryManager,
                     otel);
 
             try {
@@ -187,15 +175,14 @@ public final class ProxyResponseWriter
                     http.writeStatus(PROXY_AUTHENTICATION_REQUIRED);
                     http.writeHeader(proxy_authenticate, String.format("%s\n", realmInfo));
                 } else {
-                    String trackingId = null;
                     RequestLine requestLine = httpRequest.getRequestLine();
                     String method = requestLine.getMethod().toUpperCase();
                     boolean authenticated = true;
 
+                    String trackingId = null;
                     if (proxyUserPass != null) {
-                        TrackingKey trackingKey = proxyResponseHelper.getTrackingKey(proxyUserPass);
-                        if (trackingKey != null) {
-                            trackingId = trackingKey.getId();
+                        trackingId = repositoryManager.resolveTrackingId(proxyUserPass);
+                        if (trackingId != null) {
                             if (otel.enabled()) {
                                 Span.current().setAttribute(TRACKING_ID, trackingId);
                             }
@@ -233,13 +220,14 @@ public final class ProxyResponseWriter
                             case GET_METHOD:
                             case HEAD_METHOD: {
                                 final URL url = new URL(requestLine.getUri());
-                                logger.debug("Get artifact store, trackingId: {}, url: {}", trackingId, url);
-                                ArtifactStore store = proxyResponseHelper.getArtifactStore(trackingId, url);
+                                logger.debug("Get repository, trackingId: {}, url: {}", trackingId, url);
+                                RemoteRepository repo = proxyResponseHelper
+                                        .getRepository(trackingId, url, proxyUserPass);
                                 // 'url.getFile()' gets the file name of this URL. The returned file portion will be the
                                 // same as getPath(), plus the concatenation of the value of getQuery(), if any.
                                 proxyResponseHelper.transfer(
                                         http,
-                                        store,
+                                        repo,
                                         url.getFile(),
                                         GET_METHOD.equals(method),
                                         proxyUserPass,

@@ -16,7 +16,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.http.Header;
 import org.apache.http.HttpRequest;
-import org.commonjava.indy.model.core.ArtifactStore;
+import org.jboss.pnc.proxy.model.RemoteRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.xnio.channels.StreamSinkChannel;
@@ -148,7 +148,7 @@ public class HttpConduitWrapper
         logger.debug("Write transfer DONE.");
     }
 
-    public void writeNotFoundTransfer(ArtifactStore store, String path)
+    public void writeNotFoundTransfer(RemoteRepository repo, String path)
             throws IOException {
         Logger logger = LoggerFactory.getLogger(getClass());
         logger.debug("No transfer found.");
