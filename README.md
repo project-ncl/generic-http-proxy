@@ -1,4 +1,4 @@
-# Indy Generic Proxy Service
+# PNC Generic Proxy Service
 
 A high-performance HTTP proxy service built on Quarkus that tracks and records external resource accesses during builds for non-Maven, non-NPM files. The service automatically creates Indy remote repositories based on external URLs and ensures all external dependencies are properly tracked and cached, preventing loss of build dependency information.
 
@@ -35,9 +35,9 @@ The service is built with a modular architecture:
 
 ## Prerequisites
 
-- JDK 11+
-- Maven 3.6.2+
-- Running Indy instance (for repository operations)
+- JDK 25+
+- Maven 3.9.11+
+- Running Artifactory instance (for repository operations)
 
 ## Configuration
 
