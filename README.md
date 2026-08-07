@@ -1,6 +1,6 @@
-# PNC Generic Proxy Service
+# PNC Generic HTTP Proxy
 
-A high-performance HTTP proxy service built on Quarkus that tracks and records external resource accesses during builds for non-Maven, non-NPM files. The service automatically creates Indy remote repositories based on external URLs and ensures all external dependencies are properly tracked and cached, preventing loss of build dependency information.
+A high-performance HTTP proxy service built on Quarkus that tracks and records external resource accesses during builds for non-Maven, non-NPM files. The service automatically creates Artifactory remote repositories based on external URLs and ensures all external dependencies are properly tracked and cached, preventing loss of build dependency information.
 
 ## Architecture
 
@@ -9,27 +9,28 @@ The service is built with a modular architecture:
 - **Core Proxy Engine**: XNIO-based async HTTP proxy server (`HttpProxy.java`)
 - **Request Handlers**: `ProxyAcceptHandler` manages incoming connections and routing
 - **MITM SSL Support**: `ProxyMITMSSLServer` enables SSL interception and certificate generation
-- **Repository Integration**: REST client services for Indy repository management
+- **Repository Integration**: REST client services for Artifactory repository management
 - **Authentication**: Keycloak integration with bearer token support
 - **Observability**: OpenTelemetry tracing and metrics
 
 ## Key Features
 
 - **Build Dependency Tracking**: Records all external resource accesses during builds with build ID association
-- **Automatic Repository Creation**: Dynamically creates Indy remote repositories based on external host URLs
+- **Automatic Repository Creation**: Dynamically creates Artifactory remote repositories based on external host URLs
 - **MITM SSL Proxy**: Intercept and proxy HTTPS traffic with custom CA certificates for complete tracking
 - **Content Caching**: Intelligent caching with configurable storage strategies to avoid duplicate downloads
-- **Repository Management**: Dynamic repository creation and content retrieval via Indy API
+- **Repository Management**: Dynamic repository creation and content retrieval via Artifactory API
 - **Authentication**: Keycloak OIDC integration with configurable security
 - **High Performance**: Async I/O with configurable worker threads and connection pooling
 - **Observability**: Built-in OpenTelemetry tracing and Prometheus metrics
 
 ## Technology Stack
 
-- **Runtime**: Quarkus 2.3.0 with Java 11
-- **I/O**: XNIO for high-performance async networking
-- **HTTP Client**: OkHttp 4.9.2 for repository communication
-- **Authentication**: Keycloak 22.0.3 for OIDC/OAuth2
+- **Runtime**: Quarkus 3.38.1 with Java 25
+- **I/O**: XNIO 3.8.17.Final for high-performance async networking
+- **HTTP Client**: OkHttp 4.12.0 for repository communication
+- **Repository Client**: Artifactory Java Client 2.21.3
+- **Authentication**: Keycloak for OIDC/OAuth2
 - **Observability**: OpenTelemetry SDK with OTLP export
 - **Caching**: Caffeine cache with configurable eviction
 
@@ -56,11 +57,10 @@ MITM:
   ca.key: /tmp/ssl/ca.der      # CA private key
   ca.cert: /tmp/ssl/ca.crt     # CA certificate
 
-service_proxy:
-  services:
-    - host: localhost           # Target Indy instance
-      port: 8080
-      path-pattern: /api/.+     # URL pattern matching
+artifactory:
+  url: http://localhost:8081/artifactory
+  access-token: ${ARTIFACTORY_ACCESS_TOKEN}
+  project-key: NCL
 ```
 
 ## How It Works
@@ -72,10 +72,10 @@ The proxy service solves the problem of lost dependency tracking in non-Maven/no
 1. **Client Request**: Build process sends HTTP/HTTPS request to external resource
 2. **Proxy Interception**: Request is intercepted by the proxy service
 3. **Build ID Association**: External URL is recorded and associated with the current build ID
-4. **Repository Check**: Proxy checks if an Indy remote repository exists for the external host
+4. **Repository Check**: Proxy checks if an Artifactory remote repository exists for the external host
 5. **Repository Creation**: If not found, automatically creates a new remote repository for the host
 6. **Content Retrieval**: Fetches the resource from the external URL
-7. **Content Storage**: Stores the content in the appropriate Indy repository
+7. **Content Storage**: Stores the content in the appropriate Artifactory repository
 8. **Response**: Returns the content to the client
 
 ### Benefits
@@ -90,14 +90,17 @@ The proxy service solves the problem of lost dependency tracking in non-Maven/no
 
 1. **Build the project**:
 ```bash
-git clone https://github.com/Commonjava/indy-generic-proxy-service.git
-cd indy-generic-proxy-service
+git clone https://github.com/project-ncl/generic-http-proxy.git
+cd generic-http-proxy
 mvn clean compile
 ```
 
-2. **Configure Indy connection** in `application.yaml`:
+2. **Configure Artifactory connection** in `application.yaml`:
 ```yaml
-repo-service-api/mp-rest/uri: http://localhost:8080
+artifactory:
+  url: http://localhost:8081/artifactory
+  access-token: ${ARTIFACTORY_ACCESS_TOKEN}
+  project-key: NCL
 ```
 
 3. **Start in development mode**:
@@ -121,10 +124,9 @@ export https_proxy=http://localhost:8082
 - **`HttpProxy`**: Main application class that starts the XNIO-based proxy server
 - **`ProxyAcceptHandler`**: Handles incoming connections and manages the tracking workflow
 - **`ProxyMITMSSLServer`**: Manages SSL interception and certificate generation for HTTPS tracking
-- **`RepositoryService`**: REST client for Indy repository operations and automatic repository creation
-- **`ContentRetrievalService`**: Handles content retrieval, caching, and build ID association
-- **`ProxyResponseHelper`**: Manages the complete tracking workflow from request to response
-- **`TrackingKey`**: Associates external URLs with build IDs for dependency tracking
+- **`ArtifactoryRemoteRepositoryManager`**: Manages Artifactory repository operations and automatic repository creation
+- **`ArtifactoryContentService`**: Handles content retrieval, caching, and build ID association
+- **`ArtifactoryProxyResponseHelper`**: Manages the complete tracking workflow from request to response
 
 ### Testing
 
