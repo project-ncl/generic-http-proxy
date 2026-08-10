@@ -72,7 +72,7 @@ public final class ProxyRequestReader
                 return;
             }
 
-            logger.debug("Request in progress is:\n\n{}", new String(bytes));
+            logger.debug("Request in progress is:\n\n{}", sanitize(new String(bytes)));
 
             if (headDone) {
                 logger.debug("Request done. parsing.");
@@ -116,6 +116,10 @@ public final class ProxyRequestReader
         if (sendResponse) {
             sinkChannel.resumeWrites();
         }
+    }
+
+    private String sanitize(String s) {
+        return s.replaceFirst("Proxy-Authorization: Basic .*\\r?\\n", "Proxy-Authorization: Basic ***\n");
     }
 
     private int doRead(final ConduitStreamSourceChannel channel)

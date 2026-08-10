@@ -54,13 +54,35 @@ proxy:
 
 MITM:
   enabled: true                 # Enable MITM SSL
-  ca.key: /tmp/ssl/ca.der      # CA private key
-  ca.cert: /tmp/ssl/ca.crt     # CA certificate
+  ca.key: /tmp/ssl/ca.key      # CA private key (supports PEM or DER format)
+  ca.cert: /tmp/ssl/ca.crt     # CA certificate (supports PEM or DER format)
 
 artifactory:
   url: http://localhost:8081/artifactory
   access-token: ${ARTIFACTORY_ACCESS_TOKEN}
   project-key: NCL
+```
+
+### MITM SSL Certificate Formats
+
+The proxy supports both PEM and DER formats for CA certificates and private keys:
+
+- **Private Key**: Accepts `.pem`, `.key` (PEM format) or `.der` (DER format)
+- **Certificate**: Accepts `.pem`, `.crt` (PEM format) or `.der` (DER format)
+
+Format detection is automatic - the code detects PEM format by checking for the `-----BEGIN` header.
+
+**Example PEM files:**
+```bash
+# Generate PEM format CA key and certificate
+openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:2048 -out ca.key
+openssl req -new -x509 -days 3600 -key ca.key -subj "/CN=Test CA/O=Test Org" -out ca.crt
+```
+
+**Example DER files (legacy format):**
+```bash
+# Convert PEM to DER format
+openssl pkcs8 -topk8 -outform DER -in ca.key -out ca.der -nocrypt
 ```
 
 ## How It Works

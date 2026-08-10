@@ -19,6 +19,7 @@ import java.util.Date;
 
 import javax.security.auth.x500.X500Principal;
 
+import org.bouncycastle.asn1.pkcs.PrivateKeyInfo;
 import org.bouncycastle.asn1.x500.X500Name;
 import org.bouncycastle.asn1.x509.BasicConstraints;
 import org.bouncycastle.asn1.x509.Extension;
@@ -28,6 +29,9 @@ import org.bouncycastle.cert.X509v3CertificateBuilder;
 import org.bouncycastle.cert.jcajce.JcaX509CertificateConverter;
 import org.bouncycastle.cert.jcajce.JcaX509v3CertificateBuilder;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
+import org.bouncycastle.openssl.PEMKeyPair;
+import org.bouncycastle.openssl.PEMParser;
+import org.bouncycastle.openssl.jcajce.JcaPEMKeyConverter;
 import org.bouncycastle.operator.ContentSigner;
 import org.bouncycastle.operator.OperatorCreationException;
 import org.bouncycastle.operator.jcajce.JcaContentSignerBuilder;
@@ -88,7 +92,8 @@ public class CertUtils {
     }
 
     /**
-     * Load a certificate from a file
+     * Load a certificate from a file. Supports both PEM (.pem, .crt) and DER formats.
+     * CertificateFactory automatically handles both PEM and DER encoded certificates.
      * 
      * @param file location of file
      * @return certificate generated from the encoded file bytes
@@ -141,18 +146,57 @@ public class CertUtils {
     }
 
     /**
-     * Load a PrivateKey using the encoded bytes of a file
+     * Load a PrivateKey from a file. Supports both PEM (.pem, .key) and DER (.der) formats.
+     * PEM format is detected by checking for "-----BEGIN" header.
      * 
-     * @param filename file containing PrivateKey bytes
+     * @param filename file containing PrivateKey bytes (PEM or DER format)
      * @return created PrivateKey
      * @throws Exception
      */
     public static PrivateKey getPrivateKey(String filename) throws Exception {
-        byte[] keyBytes = Files.readAllBytes(Paths.get(filename));
+        File keyFile = new File(filename);
 
+        // Try to detect if file is PEM format by reading first few bytes
+        try (BufferedReader reader = new BufferedReader(new FileReader(keyFile))) {
+            String firstLine = reader.readLine();
+            if (firstLine != null && firstLine.contains("-----BEGIN")) {
+                // PEM format detected
+                return loadPrivateKeyFromPEM(keyFile);
+            }
+        }
+
+        // Fall back to DER format (original behavior)
+        byte[] keyBytes = Files.readAllBytes(Paths.get(filename));
         PKCS8EncodedKeySpec spec = new PKCS8EncodedKeySpec(keyBytes);
         KeyFactory kf = KeyFactory.getInstance(KEY_TYPE_RSA);
         return kf.generatePrivate(spec);
+    }
+
+    /**
+     * Load a PrivateKey from a PEM file using BouncyCastle PEMParser
+     * 
+     * @param pemFile PEM file containing the private key
+     * @return created PrivateKey
+     * @throws Exception
+     */
+    private static PrivateKey loadPrivateKeyFromPEM(File pemFile) throws Exception {
+        try (FileReader fileReader = new FileReader(pemFile);
+                PEMParser pemParser = new PEMParser(fileReader)) {
+            JcaPEMKeyConverter converter = new JcaPEMKeyConverter().setProvider(BouncyCastleProvider.PROVIDER_NAME);
+
+            Object object = pemParser.readObject();
+            return switch (object) {
+                // Handle PEM key pair (contains both private and public key) [.key]
+                case PEMKeyPair kp -> converter.getPrivateKey(kp.getPrivateKeyInfo());
+
+                // Handle PKCS#8 private key [.der]
+                case PrivateKeyInfo pki -> converter.getPrivateKey(pki);
+                case null -> throw new IllegalArgumentException("Can't parse PEM key.");
+                default ->
+                    throw new IllegalArgumentException("Unsupported PEM object type: " + object.getClass().getName());
+
+            };
+        }
     }
 
     /**

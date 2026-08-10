@@ -68,7 +68,7 @@ public class CertUtilsTest {
     @Test
     public void testSubjectCertificateSignedByIssuerCertificateWithoutExtensionIsValid()
             throws Exception {
-        PrivateKey caKey = CertUtils.getPrivateKey("src/test/resources/ssl/ca.der");
+        PrivateKey caKey = CertUtils.getPrivateKey("src/test/resources/ssl/ca.key");
         X509Certificate caCert = CertUtils.loadX509Certificate(new File("src/test/resources/ssl", "ca.crt"));
         String subjectCN = "CN=testcase.org, O=Test Org";
         CertificateAndKeys certificateAndKeys = CertUtils
@@ -87,7 +87,7 @@ public class CertUtilsTest {
     @Test
     public void testIntermediateSignedCertificateWithExtension()
             throws Exception {
-        PrivateKey caKey = CertUtils.getPrivateKey("src/test/resources/ssl/ca.der");
+        PrivateKey caKey = CertUtils.getPrivateKey("src/test/resources/ssl/ca.key");
         X509Certificate caCert = CertUtils.loadX509Certificate(new File("src/test/resources/ssl", "ca.crt"));
         String subjectCN = "CN=testcase.org, O=Test Org";
         CertificateAndKeys certificateAndKeys = CertUtils.createSignedCertificateAndKey(subjectCN, caCert, caKey, true);
