@@ -1,4 +1,3 @@
-
 quarkus:
   http:
     port: 8080
@@ -63,10 +62,12 @@ executor:
     max-queued: 50
 
 ## [MITM]
+## CA key supports both PEM (.pem, .key) and DER (.der) formats (auto-detected)
+## CA cert supports both PEM (.pem, .crt) and DER formats (auto-detected)
 MITM:
   enabled: true
   ca:
-    key: /tmp/ssl/ca.der
+    key: /tmp/ssl/ca.key
     cert: /tmp/ssl/ca.crt
   dn:
     template: CN=<host>, O=Test Org

@@ -14,9 +14,7 @@ import java.io.*;
 import java.net.*;
 import java.nio.channels.SocketChannel;
 import java.security.KeyStore;
-import java.security.PrivateKey;
 import java.security.cert.Certificate;
-import java.security.cert.X509Certificate;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
@@ -66,6 +64,8 @@ public class ProxyMITMSSLServer implements Runnable {
 
     private ProxySSLTunnel sslTunnel;
 
+    private CertificateAuthority ca;
+
     private final static long MAX_WAIT_TIME_IN_MILLIS = 60 * 1000;
 
     public ProxyMITMSSLServer(
@@ -76,7 +76,8 @@ public class ProxyMITMSSLServer implements Runnable {
             ArtifactoryProxyResponseHelper proxyResponseHelper,
             ProxyConfiguration config,
             ProxyMeter meter,
-            HttpConduitWrapper httpConduitWrapper) {
+            HttpConduitWrapper httpConduitWrapper,
+            CertificateAuthority ca) {
         this.host = host;
         this.port = port;
         this.trackingId = trackingId;
@@ -85,6 +86,7 @@ public class ProxyMITMSSLServer implements Runnable {
         this.config = config;
         this.meterTemplate = meter;
         this.httpConduitWrapper = httpConduitWrapper;
+        this.ca = ca;
     }
 
     @Override
@@ -170,14 +172,11 @@ public class ProxyMITMSSLServer implements Runnable {
     }
 
     private KeyStore getKeyStore(String host) throws Exception {
-        PrivateKey caKey = getPrivateKey(config.getMITMCAKey());
-        X509Certificate caCert = loadX509Certificate(new File(config.getMITMCACert()));
-
         String dn = config.getMITMDNTemplate().replace("<host>", host); // e.g., "CN=<host>, O=Test Org"
 
-        CertificateAndKeys certificateAndKeys = createSignedCertificateAndKey(dn, caCert, caKey, false);
+        CertificateAndKeys certificateAndKeys = ca.createSignedCertificateAndKey(dn, false);
         Certificate signedCertificate = certificateAndKeys.getCertificate();
-        logger.debug("Create signed cert:\n" + signedCertificate.toString());
+        logger.debug("Create signed cert:\n{}", signedCertificate.toString());
 
         KeyStore ks = createKeyStore();
         String alias = host;
@@ -185,7 +184,7 @@ public class ProxyMITMSSLServer implements Runnable {
                 alias,
                 certificateAndKeys.getPrivateKey(),
                 keystorePassword,
-                new Certificate[] { signedCertificate, caCert });
+                new Certificate[] { signedCertificate, ca.getCertificate() });
         return ks;
     }
 
@@ -329,8 +328,8 @@ public class ProxyMITMSSLServer implements Runnable {
     }
 
     class HostContext {
-        private KeyStore keystore;
-        private SSLServerSocketFactory sslSocketFactory;
+        private final KeyStore keystore;
+        private final SSLServerSocketFactory sslSocketFactory;
 
         HostContext(KeyStore ks, SSLServerSocketFactory factory) {
             keystore = ks;

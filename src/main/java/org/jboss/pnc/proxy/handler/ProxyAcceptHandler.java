@@ -45,6 +45,9 @@ public class ProxyAcceptHandler implements ChannelListener<AcceptingChannel<Stre
     @Inject
     ArtifactoryRepositoryManager repositoryManager;
 
+    @Inject
+    CertificateAuthority ca;
+
     @Override
     public void handleEvent(AcceptingChannel<StreamConnection> channel) {
         final Logger logger = LoggerFactory.getLogger(getClass());
@@ -81,7 +84,8 @@ public class ProxyAcceptHandler implements ChannelListener<AcceptingChannel<Stre
                 repositoryManager,
                 proxyExecutor,
                 start,
-                otel);
+                otel,
+                ca);
 
         logger.debug("Setting writer: {}", writer);
         sink.getWriteSetter().set(writer);

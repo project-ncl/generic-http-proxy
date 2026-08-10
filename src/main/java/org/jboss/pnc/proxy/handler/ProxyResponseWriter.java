@@ -51,6 +51,7 @@ public final class ProxyResponseWriter
         implements ChannelListener<ConduitStreamSinkChannel> {
 
     private final Logger logger = LoggerFactory.getLogger(getClass());
+    private final CertificateAuthority ca;
 
     private Throwable error;
     private HttpRequest httpRequest;
@@ -77,7 +78,8 @@ public final class ProxyResponseWriter
             final ArtifactoryRepositoryManager repositoryManager,
             final ManagedExecutor executor,
             final long start,
-            final OtelAdapter otel) {
+            final OtelAdapter otel,
+            final CertificateAuthority ca) {
         this.config = config;
         this.peerAddress = accepted.getPeerAddress();
         this.sourceChannel = accepted.getSourceChannel();
@@ -85,6 +87,7 @@ public final class ProxyResponseWriter
         this.tunnelAndMITMExecutor = executor;
         this.startNanos = start;
         this.otel = otel;
+        this.ca = ca;
     }
 
     public ProxyRequestReader getProxyRequestReader() {
@@ -268,7 +271,8 @@ public final class ProxyResponseWriter
                                         proxyResponseHelper,
                                         config,
                                         meter,
-                                        http);
+                                        http,
+                                        ca);
                                 tunnelAndMITMExecutor.submit(svr);
                                 socketChannel = svr.getSocketChannel();
 
