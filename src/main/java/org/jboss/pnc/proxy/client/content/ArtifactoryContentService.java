@@ -276,7 +276,7 @@ public class ArtifactoryContentService {
             logger.debug("Validating build credentials for user: {}", user);
 
             // Test access by listing repositories (lightweight operation)
-            String path = "/artifactory/api/v2/repositories/" + artifactoryConfig.projectKey() + "-mvn-builds";
+            String path = "/artifactory/api/v2/repositories/" + artifactoryConfig.projectKey() + "-mvn-ibm-builds";
 
             WebClientAdapter.RequestAdapter adapter = webClient.get(path);
             addAuthHeaders(adapter, buildToken);
