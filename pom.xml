@@ -51,7 +51,7 @@
     <indyModelVersion>2.2</indyModelVersion>
     <quarkus-plugin.version>2.3.0.Final</quarkus-plugin.version>
 
-    <artifactory-client.version>2.21.3-SNAPSHOT</artifactory-client.version>
+    <artifactory-client.version>2.22.2</artifactory-client.version>
 
     <!--
        - we specify both version and digest so that gh-action updates
