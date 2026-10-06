@@ -64,7 +64,8 @@ public class ArtifactoryRepositoryManager {
      * @throws GenericProxyException if repository operations fail
      */
     public RemoteRepository getOrCreateRepository(URL url, HttpRequest httpRequest) throws GenericProxyException {
-        String repositoryName = getRepositoryName(url);
+        boolean hasQueryParams = url.getQuery() != null;
+        String repositoryName = getRepositoryName(url, hasQueryParams);
         Lock lock = LockWrapper.getLockByKey(repositoryName);
         lock.lock();
 
@@ -87,7 +88,7 @@ public class ArtifactoryRepositoryManager {
 
             // Create new repository (Admin client)
             logger.info("Creating new repository {} for URL {}", repositoryName, url);
-            RemoteRepository created = createRepository(url, httpRequest, repositoryName);
+            RemoteRepository created = createRepository(url, httpRequest, repositoryName, hasQueryParams);
 
             cache.put(repositoryName, created);
             return created;
@@ -190,8 +191,11 @@ public class ArtifactoryRepositoryManager {
     /**
      * Create repository in Artifactory.
      */
-    private RemoteRepository createRepository(URL url, HttpRequest httpRequest, String repositoryName)
-            throws GenericProxyException {
+    private RemoteRepository createRepository(
+            URL url,
+            HttpRequest httpRequest,
+            String repositoryName,
+            boolean hasQueryParams) throws GenericProxyException {
         UrlInfo urlInfo = new UrlInfo(url.toExternalForm());
         UserPass upstreamCredentials = UserPass.parse(ApplicationHeader.authorization, httpRequest, url.getAuthority());
         String baseUrl = getBaseUrl(url);
@@ -207,6 +211,12 @@ public class ArtifactoryRepositoryManager {
             remote.addProperty("httprox.origin", "true");
             remote.addProperty("httprox.url", urlInfo.getUrl());
 
+            if (hasQueryParams) {
+                remote.setPropagateQueryParams(true);
+                remote.setUnusedArtifactsCleanupEnabled(true);
+                remote.setUnusedArtifactsCleanupPeriodHours(1);
+            }
+
             // Create in Artifactory using Admin client
             RemoteRepository created = repositoryService.createRemoteRepository(remote);
             logger.info("Repository {} created in Artifactory", repositoryName);
@@ -217,8 +227,13 @@ public class ArtifactoryRepositoryManager {
         }
     }
 
-    private String getRepositoryName(URL url) {
-        return GenericRepositoryKey.forRemote(artifactoryConfig.projectKey(), url.getHost()).getName();
+    private String getRepositoryName(URL url, boolean hasQueryParams) {
+        String projectKey = artifactoryConfig.projectKey();
+        String host = url.getHost();
+        if (hasQueryParams) {
+            return GenericRepositoryKey.forRemoteWithQueryParams(projectKey, host).getName();
+        }
+        return GenericRepositoryKey.forRemote(projectKey, host).getName();
     }
 
     private String getBaseUrl(URL url) {

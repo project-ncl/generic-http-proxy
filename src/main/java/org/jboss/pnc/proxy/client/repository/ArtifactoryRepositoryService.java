@@ -99,9 +99,8 @@ public class ArtifactoryRepositoryService {
             logger.info("Creating remote repository: {} with URL: {}", repo.getKey(), repo.getUrl());
 
             var genericRepository = new GenericRepositorySettingsImpl();
-
-            // IMPORTANT: this forces Artifactory to make remote requests for folder paths
             genericRepository.setListRemoteFolderItems(true);
+            genericRepository.setPropagateQueryParams(repo.isPropagateQueryParams());
 
             org.jfrog.artifactory.client.model.RemoteRepository remoteRepo = artifactory.repositories()
                     .builders()
@@ -110,6 +109,8 @@ public class ArtifactoryRepositoryService {
                     .url(repo.getUrl())
                     .description(repo.getDescription())
                     .listRemoteFolderItems(true)
+                    .unusedArtifactsCleanupEnabled(repo.isUnusedArtifactsCleanupEnabled())
+                    .unusedArtifactsCleanupPeriodHours(repo.getUnusedArtifactsCleanupPeriodHours())
                     .repositorySettings(genericRepository)
                     .projectKey(config.projectKey())
                     .build();

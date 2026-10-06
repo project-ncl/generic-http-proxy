@@ -20,11 +20,17 @@ public class RemoteRepository {
     private int timeoutSeconds;
     private boolean bypassHeadToGet;
     private Map<String, String> properties;
+    private boolean propagateQueryParams;
+    private boolean unusedArtifactsCleanupEnabled;
+    private int unusedArtifactsCleanupPeriodHours;
 
     public RemoteRepository() {
         this.properties = new HashMap<>();
         this.timeoutSeconds = 300; // Default 5 minutes
         this.bypassHeadToGet = false;
+        this.propagateQueryParams = false;
+        this.unusedArtifactsCleanupEnabled = false;
+        this.unusedArtifactsCleanupPeriodHours = 0;
     }
 
     public RemoteRepository(String key, String url) {
@@ -85,12 +91,39 @@ public class RemoteRepository {
         this.properties.put(key, value);
     }
 
+    public boolean isPropagateQueryParams() {
+        return propagateQueryParams;
+    }
+
+    public void setPropagateQueryParams(boolean propagateQueryParams) {
+        this.propagateQueryParams = propagateQueryParams;
+    }
+
+    public boolean isUnusedArtifactsCleanupEnabled() {
+        return unusedArtifactsCleanupEnabled;
+    }
+
+    public void setUnusedArtifactsCleanupEnabled(boolean unusedArtifactsCleanupEnabled) {
+        this.unusedArtifactsCleanupEnabled = unusedArtifactsCleanupEnabled;
+    }
+
+    public int getUnusedArtifactsCleanupPeriodHours() {
+        return unusedArtifactsCleanupPeriodHours;
+    }
+
+    public void setUnusedArtifactsCleanupPeriodHours(int unusedArtifactsCleanupPeriodHours) {
+        this.unusedArtifactsCleanupPeriodHours = unusedArtifactsCleanupPeriodHours;
+    }
+
     @Override
     public String toString() {
         return "RemoteRepository{" +
                 "key='" + key + '\'' +
                 ", url='" + url + '\'' +
                 ", timeoutSeconds=" + timeoutSeconds +
+                ", propagateQueryParams=" + propagateQueryParams +
+                ", unusedArtifactsCleanupEnabled=" + unusedArtifactsCleanupEnabled +
+                ", unusedArtifactsCleanupPeriodHours=" + unusedArtifactsCleanupPeriodHours +
                 '}';
     }
 }
