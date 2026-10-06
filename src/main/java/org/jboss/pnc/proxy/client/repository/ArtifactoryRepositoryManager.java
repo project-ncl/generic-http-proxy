@@ -203,7 +203,7 @@ public class ArtifactoryRepositoryManager {
         try {
             // Create repository model
             RemoteRepository remote = new RemoteRepository(repositoryName, baseUrl);
-            remote.setDescription("HTTProx proxy for: " + urlInfo.getUrl());
+            remote.setDescription("HTTProx proxy for: " + urlInfo.getHost());
             remote.setTimeoutSeconds(300); // 5 minutes
             remote.setBypassHeadToGet(false);
 
