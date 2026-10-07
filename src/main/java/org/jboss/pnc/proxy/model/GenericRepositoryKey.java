@@ -7,9 +7,8 @@ package org.jboss.pnc.proxy.model;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.util.HexFormat;
 import java.util.Objects;
-
-import jakarta.xml.bind.DatatypeConverter;
 
 /**
  * Simplified repository key for Artifactory repositories.
@@ -160,7 +159,7 @@ public class GenericRepositoryKey {
         try {
             MessageDigest md = MessageDigest.getInstance("MD5");
             byte[] digest = md.digest(input.getBytes(StandardCharsets.UTF_8));
-            return DatatypeConverter.printHexBinary(digest).toLowerCase().substring(0, 12);
+            return HexFormat.of().formatHex(digest).toLowerCase().substring(0, 12);
         } catch (NoSuchAlgorithmException e) {
             throw new IllegalStateException("Failed to compute MD5 for: " + input, e);
         }
