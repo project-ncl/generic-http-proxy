@@ -303,6 +303,11 @@
         <artifactId>spotless-maven-plugin</artifactId>
         <version>3.10.3</version>
         <configuration>
+          <pom>
+            <sortPom>
+              <expandEmptyElements>false</expandEmptyElements>
+            </sortPom>
+          </pom>
           <java>
             <removeUnusedImports/>
             <importOrder>
@@ -313,11 +318,6 @@
             </eclipse>
             <lineEndings>UNIX</lineEndings>
           </java>
-          <pom>
-            <sortPom>
-              <expandEmptyElements>false</expandEmptyElements>
-            </sortPom>
-          </pom>
         </configuration>
         <dependencies>
           <dependency>
@@ -351,7 +351,6 @@ SPDX-License-Identifier: Apache-2.0
                 <exclude>LICENSE.txt</exclude>
                 <exclude>CODE_OF_CONDUCT.md</exclude>
                 <exclude>MIGRATION_PLAN.md</exclude>
-                <exclude>eclipse-codeStyle.xml</exclude>
                 <exclude>**/Dockerfile</exclude>
                 <exclude>**/scripts/**</exclude>
                 <exclude>**/images/**</exclude>
