@@ -13,7 +13,7 @@ jobs:
     call-release-job:
       permissions:
         contents: write # needed to push commit and tag back to the repository
-      uses: project-ncl/shared-github-actions/.github/workflows/maven-release.yml@9735924b878ff3890cfaf16acb28e06531963ebf # v0.0.25
+      uses: project-ncl/shared-github-actions/.github/workflows/maven-release.yml@63a807ade0dabfd11e88043f2da2d8e67ac3f417 # main
       with:
         ref_to_release: ${{ inputs.ref_to_release }}
         java_version: '25'
@@ -22,3 +22,5 @@ jobs:
         SONATYPE_PASSWORD: ${{ secrets.SONATYPE_PASSWORD }}
         GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
         GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
+        QUAY_USERNAME: ${{ secrets.QUAY_PROD_USERNAME }}
+        QUAY_PASSWORD: ${{ secrets.QUAY_PROD_PASSWORD }}
