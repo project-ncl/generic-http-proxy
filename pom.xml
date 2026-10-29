@@ -17,7 +17,7 @@
 
   <groupId>org.jboss.pnc</groupId>
   <artifactId>generic-http-proxy</artifactId>
-  <version>4.0.1-SNAPSHOT</version>
+  <version>4.0.1</version>
 
   <name>PNC :: Generic HTTP Proxy</name>
   <description>PNC Generic HTTP Proxy Service</description>
@@ -27,7 +27,7 @@
   <scm>
     <connection>scm:git:https://github.com/project-ncl/generic-http-proxy</connection>
     <developerConnection>scm:git:https://github.com/project-ncl/generic-http-proxy</developerConnection>
-    <tag>HEAD</tag>
+    <tag>4.0.1</tag>
     <url>https://github.com/project-ncl/generic-http-proxy</url>
   </scm>
 
