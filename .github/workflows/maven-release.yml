@@ -17,6 +17,7 @@ jobs:
       with:
         ref_to_release: ${{ inputs.ref_to_release }}
         java_version: '25'
+        quarkus_jib_image: true
       secrets:
         SONATYPE_USERNAME: ${{ secrets.SONATYPE_USERNAME }}
         SONATYPE_PASSWORD: ${{ secrets.SONATYPE_PASSWORD }}
