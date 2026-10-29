@@ -45,7 +45,7 @@
     <httpclientVersion>4.5.14</httpclientVersion>
     <indyModelVersion>2.2</indyModelVersion>
 
-    <artifactory-client.version>2.22.4-SNAPSHOT</artifactory-client.version>
+    <artifactory-client.version>2.22.4</artifactory-client.version>
 
     <!--
        - we specify both version and digest so that gh-action updates
