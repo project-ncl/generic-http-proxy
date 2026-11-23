@@ -52,7 +52,7 @@
        - both. The version is great for humans, the digest great for
        - pinning the version properly
       -->
-    <quarkus.jib.base-jvm-image>registry.access.redhat.com/ubi9/openjdk-25-runtime:1.24-3@sha256:de073e98f1bb4be12f1454e1685c37db876af845896e0495f4eab0931154f9e4</quarkus.jib.base-jvm-image>
+    <quarkus.jib.base-jvm-image>registry.access.redhat.com/ubi9/openjdk-25-runtime:1.24-5@sha256:408a999ab63b12697eb6d16d5c54b983733cb533309c5e861b0efa41d6d73693</quarkus.jib.base-jvm-image>
   </properties>
 
   <dependencyManagement>
